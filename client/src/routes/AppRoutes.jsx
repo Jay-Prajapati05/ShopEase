@@ -6,9 +6,11 @@ import HomePage from "../pages/HomePage.jsx";
 import LoginPage from "../pages/LoginPage.jsx";
 import RegisterPage from "../pages/RegisterPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
+import ProductsPage from "../pages/ProductsPage.jsx";
+import ProductDetailPage from "../pages/ProductDetailPage.jsx";
+import CartPage from "../pages/CartPage.jsx";
 
 // Future phase imports (add as features are built):
-// import ProductsPage from "../pages/ProductsPage.jsx";
 // import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
 
 export default function AppRoutes() {
@@ -17,6 +19,9 @@ export default function AppRoutes() {
       {/* Public routes — wrapped in the shared Navbar + Footer layout */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 

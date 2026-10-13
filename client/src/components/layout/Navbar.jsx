@@ -1,10 +1,12 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ShoppingBag, LogOut, User, LayoutDashboard, Menu, X } from "lucide-react";
+import { ShoppingBag, LogOut, LayoutDashboard, Menu, X, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useCart } from "../../hooks/useCart.js";
 
 export default function Navbar() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { totalItems } = useCart();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -38,6 +40,7 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6">
             <NavLink to="/" end className={navLinkClass}>Home</NavLink>
+            <NavLink to="/products" className={navLinkClass}>Products</NavLink>
 
             {isAdmin && (
               <NavLink to="/admin" className={navLinkClass}>
@@ -51,6 +54,16 @@ export default function Navbar() {
 
           {/* Desktop right side */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Cart icon */}
+            <Link to="/cart" className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors" aria-label="Cart">
+              <ShoppingCart className="w-5 h-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {totalItems > 9 ? "9+" : totalItems}
+                </span>
+              )}
+            </Link>
+
             {isAuthenticated ? (
               <>
                 <span className="text-sm text-gray-500 font-medium">
@@ -102,6 +115,20 @@ export default function Navbar() {
               onClick={() => setMobileOpen(false)}
             >
               Home
+            </NavLink>
+            <NavLink
+              to="/products"
+              className={navLinkClass}
+              onClick={() => setMobileOpen(false)}
+            >
+              Products
+            </NavLink>
+            <NavLink
+              to="/cart"
+              className={navLinkClass}
+              onClick={() => setMobileOpen(false)}
+            >
+              Cart {totalItems > 0 && <span className="text-brand-600 font-bold">({totalItems})</span>}
             </NavLink>
             {isAdmin && (
               <NavLink
