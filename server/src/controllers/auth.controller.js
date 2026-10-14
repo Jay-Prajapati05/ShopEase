@@ -49,3 +49,19 @@ export const getMe = asyncHandler(async (req, res) => {
 
   res.status(200).json(new ApiResponse(200, "User fetched", { user }));
 });
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body ?? {};
+  const result = await authService.forgotPassword(email);
+
+  res.status(200).json(new ApiResponse(200, result.message));
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body ?? {};
+
+  const result = await authService.resetPassword(token, password);
+
+  res.status(200).json(new ApiResponse(200, result.message));
+});
