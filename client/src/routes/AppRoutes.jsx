@@ -5,6 +5,8 @@ import AdminRoute from "./AdminRoute.jsx";
 import HomePage from "../pages/HomePage.jsx";
 import LoginPage from "../pages/LoginPage.jsx";
 import RegisterPage from "../pages/RegisterPage.jsx";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "../pages/ResetPasswordPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
 import ProductsPage from "../pages/ProductsPage.jsx";
 import ProductDetailPage from "../pages/ProductDetailPage.jsx";
@@ -28,6 +30,8 @@ export default function AppRoutes() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
         {/* Protected routes (logged-in users only) */}
         <Route element={<PrivateRoute />}>
