@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ShoppingBag, LogOut, LayoutDashboard, Menu, X, ShoppingCart } from "lucide-react";
+import { ShoppingBag, LogOut, LayoutDashboard, Menu, X, ShoppingCart, Package } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useCart } from "../../hooks/useCart.js";
@@ -41,6 +41,15 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-6">
             <NavLink to="/" end className={navLinkClass}>Home</NavLink>
             <NavLink to="/products" className={navLinkClass}>Products</NavLink>
+
+            {isAuthenticated && (
+              <NavLink to="/my-orders" className={navLinkClass}>
+                <span className="flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5" />
+                  My Orders
+                </span>
+              </NavLink>
+            )}
 
             {isAdmin && (
               <NavLink to="/admin" className={navLinkClass}>
@@ -130,6 +139,15 @@ export default function Navbar() {
             >
               Cart {totalItems > 0 && <span className="text-brand-600 font-bold">({totalItems})</span>}
             </NavLink>
+            {isAuthenticated && (
+              <NavLink
+                to="/my-orders"
+                className={navLinkClass}
+                onClick={() => setMobileOpen(false)}
+              >
+                My Orders
+              </NavLink>
+            )}
             {isAdmin && (
               <NavLink
                 to="/admin"

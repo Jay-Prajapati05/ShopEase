@@ -9,6 +9,10 @@ import NotFoundPage from "../pages/NotFoundPage.jsx";
 import ProductsPage from "../pages/ProductsPage.jsx";
 import ProductDetailPage from "../pages/ProductDetailPage.jsx";
 import CartPage from "../pages/CartPage.jsx";
+import CheckoutPage from "../pages/CheckoutPage.jsx";
+import OrderSuccessPage from "../pages/OrderSuccessPage.jsx";
+import MyOrdersPage from "../pages/MyOrdersPage.jsx";
+import OrderDetailPage from "../pages/OrderDetailPage.jsx";
 
 // Future phase imports (add as features are built):
 // import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
@@ -27,7 +31,10 @@ export default function AppRoutes() {
 
         {/* Protected routes (logged-in users only) */}
         <Route element={<PrivateRoute />}>
-          {/* Phase 5+ routes go here, e.g. /products, /cart, /orders */}
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order/success/:id" element={<OrderSuccessPage />} />
+          <Route path="/my-orders" element={<MyOrdersPage />} />
+          <Route path="/orders/:id" element={<OrderDetailPage />} />
         </Route>
 
         {/* Admin-only routes */}
