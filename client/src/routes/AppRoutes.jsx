@@ -16,13 +16,26 @@ import OrderSuccessPage from "../pages/OrderSuccessPage.jsx";
 import MyOrdersPage from "../pages/MyOrdersPage.jsx";
 import OrderDetailPage from "../pages/OrderDetailPage.jsx";
 
-// Future phase imports (add as features are built):
-// import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
+import AdminLayout from "../components/admin/AdminLayout.jsx";
+import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
+import AdminProductsPage from "../pages/admin/AdminProductsPage.jsx";
+import AdminOrdersPage from "../pages/admin/AdminOrdersPage.jsx";
+import AdminUsersPage from "../pages/admin/AdminUsersPage.jsx";
 
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Public routes — wrapped in the shared Navbar + Footer layout */}
+      {/* Admin routes — wrapped in dedicated AdminLayout */}
+      <Route element={<AdminRoute />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/products" element={<AdminProductsPage />} />
+          <Route path="/admin/orders" element={<AdminOrdersPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+        </Route>
+      </Route>
+
+      {/* Customer storefront routes — wrapped in Navbar + Footer layout */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/products" element={<ProductsPage />} />
@@ -33,17 +46,12 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-        {/* Protected routes (logged-in users only) */}
+        {/* Protected customer routes (logged-in users only) */}
         <Route element={<PrivateRoute />}>
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order/success/:id" element={<OrderSuccessPage />} />
           <Route path="/my-orders" element={<MyOrdersPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
-        </Route>
-
-        {/* Admin-only routes */}
-        <Route element={<AdminRoute />}>
-          {/* Phase 7+ admin routes go here */}
         </Route>
 
         {/* 404 — must stay last */}
