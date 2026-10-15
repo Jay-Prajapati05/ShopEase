@@ -3,6 +3,7 @@ import Product from "../models/Product.js";
 import ApiError from "../utils/ApiError.js";
 import pick from "../utils/pick.js";
 import escapeRegex from "../utils/escapeRegex.js";
+import { deleteImages } from "./upload.service.js";
 
 const WRITABLE_FIELDS = [
   "name",
@@ -123,6 +124,20 @@ export const updateProduct = async (id, body) => {
   }
 
   const product = await findProductOrThrow(id);
+
+  // If new images array is supplied, delete any replaced images from Cloudinary (no orphaned assets)
+  if (Array.isArray(updates.images)) {
+    const newPublicIds = new Set(
+      updates.images.map((img) => img?.public_id).filter(Boolean)
+    );
+    const removedImages = (product.images || []).filter(
+      (img) => img?.public_id && !newPublicIds.has(img.public_id)
+    );
+    if (removedImages.length > 0) {
+      deleteImages(removedImages);
+    }
+  }
+
   product.set(updates);
   await product.save(); // runs schema validators
   return product;
@@ -133,5 +148,11 @@ export const deleteProduct = async (id) => {
     throw ApiError.notFound("Product not found");
   const product = await Product.findByIdAndDelete(id);
   if (!product) throw ApiError.notFound("Product not found");
+
+  // Delete all associated images from Cloudinary upon product removal
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    deleteImages(product.images);
+  }
+
   return product;
 };
