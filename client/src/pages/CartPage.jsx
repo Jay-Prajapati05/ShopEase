@@ -199,20 +199,20 @@ export default function CartPage() {
             <button
               type="button"
               onClick={() => navigate("/checkout")}
-              className="w-full inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:bg-brand-700 transition-all shadow-md hover:shadow-lg"
+              className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 text-gray-950 font-black py-4 px-4 rounded-xl hover:bg-brand-600 hover:text-white transition-all shadow-md hover:shadow-lg text-base"
             >
               Proceed to Checkout
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-5 h-5" />
             </button>
           ) : (
             <div className="space-y-2">
               <button
                 type="button"
                 onClick={() => navigate("/login", { state: { from: { pathname: "/cart" } } })}
-                className="w-full inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:bg-brand-700 transition-all shadow-md hover:shadow-lg"
+                className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 text-gray-950 font-black py-4 px-4 rounded-xl hover:bg-brand-600 hover:text-white transition-all shadow-md hover:shadow-lg text-base"
               >
                 Sign in to Checkout
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5" />
               </button>
               <p className="text-[11px] text-center text-gray-400">
                 Don't have an account?{" "}

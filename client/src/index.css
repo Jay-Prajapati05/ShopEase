@@ -3,7 +3,57 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  :root {
+    /* =========================================================================
+       SHOPEASE DESIGN SYSTEM - CENTRALIZED THEME TOKENS
+       Change these RGB triplets in ONE place to re-theme the entire application!
+       RGB triplets allow Tailwind opacity modifiers (e.g. bg-brand-50/50).
+       ========================================================================= */
+
+    /* 🟡 ACTIVE THEME: AMAZON / FLIPKART WARM GOLDEN AMBER (Default) */
+    --brand-50: 255 251 235;    /* #fffbeb - Soft background tint */
+    --brand-100: 254 243 199;   /* #fef3c7 - Light badge / chip */
+    --brand-200: 253 230 138;   /* #fde68a - Subtle border */
+    --brand-300: 252 211 77;    /* #fcd34d - Star ratings / accents */
+    --brand-400: 251 191 36;    /* #fbbf24 - Vibrant yellow */
+    --brand-500: 245 158 11;    /* #f59e0b - Primary Brand Gold */
+    --brand-600: 217 119 6;     /* #d97706 - Primary Action Buttons & Links */
+    --brand-700: 180 83 9;      /* #b45309 - Button Hover / Deep Accent */
+    --brand-800: 146 64 14;     /* #92400e - Deep Text */
+    --brand-900: 120 53 15;     /* #78350f - Maximum Contrast Text */
+
+    /* -------------------------------------------------------------------------
+       PRESET 2: FRESH MINT / EMERALD GREEN (Blinkit, Organic D2C, Groceries)
+       To switch to Green: replace values above with these:
+       --brand-50: 240 253 244;
+       --brand-100: 220 252 231;
+       --brand-200: 187 247 208;
+       --brand-300: 134 239 172;
+       --brand-400: 74 222 128;
+       --brand-500: 34 197 94;
+       --brand-600: 22 163 74;
+       --brand-700: 21 128 61;
+       --brand-800: 22 101 52;
+       --brand-900: 20 83 45;
+       -------------------------------------------------------------------------
+       PRESET 3: FLIPKART ROYAL BLUE (Electronics, Tech, Gadgets)
+       --brand-50: 239 246 255;
+       --brand-100: 219 234 254;
+       --brand-200: 191 219 254;
+       --brand-300: 147 197 253;
+       --brand-400: 96 165 250;
+       --brand-500: 59 130 246;
+       --brand-600: 37 99 235;
+       --brand-700: 29 78 216;
+       --brand-800: 30 64 175;
+       --brand-900: 30 58 138;
+       ------------------------------------------------------------------------- */
+  }
+
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
 }
+

@@ -140,10 +140,10 @@ export default function RegisterPage() {
               id="register-submit"
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white font-semibold py-2.5 rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-brand-500 text-gray-950 font-black py-3 rounded-xl hover:bg-brand-600 hover:text-white transition-all shadow-xs disabled:opacity-60 disabled:cursor-not-allowed text-sm active:scale-[0.99]"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {loading ? "Creating account…" : "Create account"}
+              {loading ? "Creating account…" : "Create ShopEase Account"}
             </button>
           </form>
 
