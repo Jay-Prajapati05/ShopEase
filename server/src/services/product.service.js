@@ -63,7 +63,12 @@ export const getProducts = async (query = {}) => {
   }
 
   const category = asString(query.category);
-  if (category) filter.category = category;
+  if (category) {
+    const escaped = escapeRegex(category);
+    const singular = escaped.replace(/e?s$/i, "");
+    const pattern = singular.replace(/elec?tronic/i, "elec?tronic");
+    filter.category = new RegExp(pattern, "i");
+  }
 
   const minPrice = parsePrice(query.minPrice, "minPrice");
   const maxPrice = parsePrice(query.maxPrice, "maxPrice");
