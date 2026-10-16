@@ -447,7 +447,7 @@ export default function CheckoutPage() {
               type="submit"
               form="checkout-form"
               disabled={submitting}
-              className="w-full inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:bg-brand-700 transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 text-gray-950 font-black py-4 px-4 rounded-xl hover:bg-brand-600 hover:text-white transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-base active:scale-[0.99]"
             >
               {submitting ? (
                 <>
@@ -456,7 +456,7 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <>
-                  Place Order (COD)
+                  Place Order (Cash on Delivery)
                   <CheckCircle2 className="w-5 h-5" />
                 </>
               )}

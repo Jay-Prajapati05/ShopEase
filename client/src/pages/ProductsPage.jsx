@@ -134,9 +134,9 @@ export default function ProductsPage() {
   ].filter(Boolean).length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 w-full max-w-full">
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Products</h1>
         {pagination && !loading && (
           <p className="text-sm text-gray-500">
@@ -210,14 +210,31 @@ export default function ProductsPage() {
                 Category
               </label>
               <select
-                value={filters.category}
+                value={
+                  categories.find(
+                    (c) =>
+                      c.toLowerCase() === (filters.category || "").toLowerCase() ||
+                      c.toLowerCase().replace(/e?s$/, "") === (filters.category || "").toLowerCase().replace(/e?s$/, "") ||
+                      (c.toLowerCase().includes("eletronic") && (filters.category || "").toLowerCase().includes("electr"))
+                  ) || filters.category
+                }
                 onChange={(e) => handleFilterChange("category", e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500 bg-white capitalize"
               >
                 <option value="">All Categories</option>
                 {categories.map((cat) => (
                   <option key={cat} value={cat} className="capitalize">{cat}</option>
                 ))}
+                {filters.category &&
+                  !categories.some(
+                    (c) =>
+                      c.toLowerCase() === filters.category.toLowerCase() ||
+                      c.toLowerCase().replace(/e?s$/, "") === filters.category.toLowerCase().replace(/e?s$/, "")
+                  ) && (
+                    <option value={filters.category} className="capitalize">
+                      {filters.category}
+                    </option>
+                  )}
               </select>
             </div>
 
@@ -261,7 +278,7 @@ export default function ProductsPage() {
 
       {/* Product Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : products.length === 0 ? (
@@ -277,7 +294,7 @@ export default function ProductsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           {products.map((product) => (
             <ProductCard key={product._id} product={product} />
           ))}

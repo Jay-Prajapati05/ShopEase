@@ -92,10 +92,10 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-brand-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-brand-700 transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+                  className="w-full flex items-center justify-center gap-2 bg-brand-500 text-gray-950 font-black py-3.5 px-4 rounded-xl hover:bg-brand-600 hover:text-white transition-all shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed text-sm active:scale-[0.99]"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {loading ? "Sending link…" : "Send Reset Link"}
+                  {loading ? "Sending link…" : "Send Password Reset Link"}
                 </button>
               </form>
             </>
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
               </p>
               <Link
                 to="/login"
-                className="w-full inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-semibold py-2.5 px-4 rounded-xl hover:bg-brand-700 transition-colors text-sm shadow-sm"
+                className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 text-gray-950 font-black py-3 px-4 rounded-xl hover:bg-brand-600 hover:text-white transition-all text-sm shadow-sm"
               >
                 Return to Login
               </Link>

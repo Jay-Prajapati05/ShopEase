@@ -272,17 +272,17 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={handleAddToCart}
                   disabled={isMaxInCart || maxAvailable === 0}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 font-semibold px-6 py-3.5 rounded-xl transition-all shadow-sm ${
+                  className={`flex-1 inline-flex items-center justify-center gap-2 font-black px-6 py-4 rounded-xl transition-all shadow-md ${
                     justAdded
                       ? "bg-green-600 text-white"
                       : isMaxInCart || maxAvailable === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                      : "bg-brand-500 text-gray-950 hover:bg-brand-600 hover:text-white hover:shadow-lg active:scale-[0.98]"
                   }`}
                 >
                   {justAdded ? (
                     <>
-                      <Check className="w-5 h-5" />
+                      <Check className="w-5 h-5 stroke-[2.5]" />
                       Added to Cart!
                     </>
                   ) : (
@@ -296,9 +296,9 @@ export default function ProductDetailPage() {
                 {isInCart(product._id) && (
                   <Link
                     to="/cart"
-                    className="inline-flex items-center justify-center font-semibold px-6 py-3.5 rounded-xl border border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors"
+                    className="inline-flex items-center justify-center font-bold px-6 py-4 rounded-xl border border-brand-300 text-brand-900 bg-brand-50 hover:bg-brand-100 transition-colors shadow-xs"
                   >
-                    View Cart
+                    View Cart ({currentCartQty})
                   </Link>
                 )}
               </div>
