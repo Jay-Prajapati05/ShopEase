@@ -55,5 +55,17 @@
     max-width: 100%;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
+
+  /* Prevent typing/caret selection on interactive navigation, buttons, and badges */
+  nav, button, a, [role="button"], .select-none {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  a, button, [role="button"] {
+    cursor: pointer;
+  }
 }
 

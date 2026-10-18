@@ -41,3 +41,53 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
   res.status(200).json(new ApiResponse(200, "Product deleted"));
 });
+
+export const getReviewStatus = asyncHandler(async (req, res) => {
+  const status = await productService.getProductReviewStatus(
+    req.params.id,
+    req.user._id
+  );
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Review status fetched", status));
+});
+
+export const createReview = asyncHandler(async (req, res) => {
+  const { rating, comment } = req.body ?? {};
+
+  const product = await productService.createProductReview(
+    req.params.id,
+    req.user._id,
+    { rating, comment, name: req.user.name }
+  );
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, "Review added successfully", { product }));
+});
+
+export const updateReview = asyncHandler(async (req, res) => {
+  const { rating, comment } = req.body ?? {};
+
+  const product = await productService.updateProductReview(
+    req.params.id,
+    req.user._id,
+    { rating, comment }
+  );
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Review updated successfully", { product }));
+});
+
+export const deleteReview = asyncHandler(async (req, res) => {
+  const product = await productService.deleteProductReview(
+    req.params.id,
+    req.user._id
+  );
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Review deleted successfully", { product }));
+});

@@ -76,6 +76,15 @@ export default function ProductCard({ product }) {
           <p className="text-[11px] sm:text-xs text-gray-400 font-medium truncate">{product.brand}</p>
         )}
 
+        {/* Rating if reviews exist */}
+        {product.numReviews > 0 && (
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+            <span>{(product.rating || 0).toFixed(1)}</span>
+            <span className="text-slate-400 font-normal">({product.numReviews})</span>
+          </div>
+        )}
+
         {/* Price + Cart button */}
         <div className="flex items-center justify-between gap-1.5 mt-auto pt-2.5 sm:pt-3 border-t border-gray-50">
           <div className="min-w-0">

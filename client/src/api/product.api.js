@@ -26,6 +26,43 @@ export const productApi = {
     const response = await api.get("/products/categories");
     return response.data; // { success, data: { categories } }
   },
+
+  /**
+   * Fetch review eligibility status for the logged-in user.
+   */
+  getReviewStatus: async (productId) => {
+    const response = await api.get(`/products/${productId}/review-status`);
+    return response.data;
+  },
+
+  /**
+   * Submit a product review.
+   * @param {string} productId
+   * @param {{ rating: number, comment: string }} reviewData
+   */
+  createReview: async (productId, reviewData) => {
+    const response = await api.post(`/products/${productId}/reviews`, reviewData);
+    return response.data;
+  },
+
+  /**
+   * Update an existing product review.
+   * @param {string} productId
+   * @param {{ rating: number, comment: string }} reviewData
+   */
+  updateReview: async (productId, reviewData) => {
+    const response = await api.put(`/products/${productId}/reviews`, reviewData);
+    return response.data;
+  },
+
+  /**
+   * Delete an existing product review.
+   * @param {string} productId
+   */
+  deleteReview: async (productId) => {
+    const response = await api.delete(`/products/${productId}/reviews`);
+    return response.data;
+  },
 };
 
 export default productApi;

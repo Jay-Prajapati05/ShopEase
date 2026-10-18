@@ -8,6 +8,38 @@ const imageSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const reviewSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    rating: {
+      type: Number,
+      required: true,
+      min: [1, "Rating cannot be less than 1"],
+      max: [5, "Rating cannot be more than 5"],
+    },
+    comment: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [1000, "Comment cannot exceed 1000 characters"],
+    },
+    isVerifiedBuyer: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true },
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -49,11 +81,27 @@ const productSchema = new mongoose.Schema(
         message: "Stock must be a whole number",
       },
     },
+    reviews: {
+      type: [reviewSchema],
+      default: [],
+    },
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true },
 );
 
 productSchema.index({ createdAt: -1 });
 productSchema.index({ category: 1, price: 1 });
+productSchema.index({ "reviews.user": 1 });
 
 export default mongoose.model("Product", productSchema);

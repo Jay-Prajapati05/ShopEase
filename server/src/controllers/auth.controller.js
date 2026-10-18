@@ -65,3 +65,18 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   res.status(200).json(new ApiResponse(200, result.message));
 });
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { name, email, currentPassword, newPassword } = req.body ?? {};
+
+  const user = await authService.updateProfile(req.user._id, {
+    name,
+    email,
+    currentPassword,
+    newPassword,
+  });
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Profile updated successfully", { user }));
+});

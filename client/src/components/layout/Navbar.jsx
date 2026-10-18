@@ -101,14 +101,18 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
-                <div className="flex items-center gap-2">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 hover:bg-gray-100 p-1.5 rounded-xl transition-colors"
+                  title="My Profile"
+                >
                   <div className="w-8 h-8 rounded-full bg-brand-100 border border-brand-200 text-brand-800 font-bold text-xs flex items-center justify-center">
                     {user?.name?.[0]?.toUpperCase() || "U"}
                   </div>
                   <span className="text-sm font-semibold text-gray-800">
                     {user?.name?.split(" ")[0]}
                   </span>
-                </div>
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -258,17 +262,31 @@ export default function Navbar() {
               </NavLink>
 
               {isAuthenticated && (
-                <NavLink
-                  to="/my-orders"
-                  className={mobileNavLinkClass}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Package className="w-4 h-4 text-gray-500" />
-                    <span>My Orders</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </NavLink>
+                <>
+                  <NavLink
+                    to="/profile"
+                    className={mobileNavLinkClass}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span>My Profile</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </NavLink>
+
+                  <NavLink
+                    to="/my-orders"
+                    className={mobileNavLinkClass}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Package className="w-4 h-4 text-gray-500" />
+                      <span>My Orders</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </NavLink>
+                </>
               )}
 
               {isAdmin && (

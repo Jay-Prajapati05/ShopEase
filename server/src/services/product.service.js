@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
+import Order from "../models/Order.js";
 import ApiError from "../utils/ApiError.js";
 import pick from "../utils/pick.js";
 import escapeRegex from "../utils/escapeRegex.js";
@@ -159,5 +160,199 @@ export const deleteProduct = async (id) => {
     deleteImages(product.images);
   }
 
+  return product;
+};
+
+export const getProductReviewStatus = async (productId, userId) => {
+  if (!mongoose.isValidObjectId(productId)) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) throw ApiError.notFound("Product not found");
+
+  const hasReviewed = product.reviews.some(
+    (r) => r.user.toString() === userId.toString()
+  );
+
+  const isVerifiedBuyer = Boolean(
+    await Order.exists({
+      user: userId,
+      "items.product": productId,
+      $or: [{ isPaid: true }, { status: "Delivered" }],
+    })
+  );
+
+  return {
+    canReview: !hasReviewed,
+    hasReviewed,
+    isVerifiedBuyer,
+  };
+};
+
+export const createProductReview = async (
+  productId,
+  userId,
+  { rating, comment, name }
+) => {
+  if (!mongoose.isValidObjectId(productId)) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  // 1. Validation
+  const numericRating = Number(rating);
+  if (
+    !Number.isInteger(numericRating) ||
+    numericRating < 1 ||
+    numericRating > 5
+  ) {
+    throw ApiError.badRequest("Rating must be an integer between 1 and 5");
+  }
+
+  if (typeof comment !== "string" || !comment.trim()) {
+    throw ApiError.badRequest("Review comment is required");
+  }
+  if (comment.trim().length > 1000) {
+    throw ApiError.badRequest("Review comment cannot exceed 1000 characters");
+  }
+
+  // 2. Check if product exists and if user already reviewed
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  const alreadyReviewed = product.reviews.some(
+    (r) => r.user.toString() === userId.toString()
+  );
+  if (alreadyReviewed) {
+    throw ApiError.badRequest("You have already reviewed this product");
+  }
+
+  // 3. Verified buyer check
+  const isVerifiedBuyer = Boolean(
+    await Order.exists({
+      user: userId,
+      "items.product": productId,
+      $or: [{ isPaid: true }, { status: "Delivered" }],
+    })
+  );
+
+  // 4. Calculate new aggregate rating and review count
+  const newNumReviews = product.reviews.length + 1;
+  const totalRating =
+    product.reviews.reduce((sum, r) => sum + r.rating, 0) + numericRating;
+  const newAvgRating = Math.round((totalRating / newNumReviews) * 10) / 10;
+
+  const newReview = {
+    user: userId,
+    name:
+      name && typeof name === "string" ? name.trim() : "Customer",
+    rating: numericRating,
+    comment: comment.trim(),
+    isVerifiedBuyer,
+  };
+
+  // 5. Atomic update: push review and update rating stats safely
+  const updatedProduct = await Product.findOneAndUpdate(
+    {
+      _id: productId,
+      "reviews.user": { $ne: userId },
+    },
+    {
+      $push: { reviews: newReview },
+      $set: { rating: newAvgRating, numReviews: newNumReviews },
+    },
+    { new: true, select: "-__v" }
+  );
+
+  if (!updatedProduct) {
+    throw ApiError.badRequest("You have already reviewed this product");
+  }
+
+  return updatedProduct;
+};
+
+export const updateProductReview = async (
+  productId,
+  userId,
+  { rating, comment }
+) => {
+  if (!mongoose.isValidObjectId(productId)) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  const numericRating = Number(rating);
+  if (
+    !Number.isInteger(numericRating) ||
+    numericRating < 1 ||
+    numericRating > 5
+  ) {
+    throw ApiError.badRequest("Rating must be an integer between 1 and 5");
+  }
+
+  if (typeof comment !== "string" || !comment.trim()) {
+    throw ApiError.badRequest("Review comment is required");
+  }
+  if (comment.trim().length > 1000) {
+    throw ApiError.badRequest("Review comment cannot exceed 1000 characters");
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  const reviewIndex = product.reviews.findIndex(
+    (r) => r.user.toString() === userId.toString()
+  );
+
+  if (reviewIndex === -1) {
+    throw ApiError.notFound("You have not reviewed this product yet");
+  }
+
+  // Update existing review fields
+  product.reviews[reviewIndex].rating = numericRating;
+  product.reviews[reviewIndex].comment = comment.trim();
+  product.reviews[reviewIndex].updatedAt = new Date();
+
+  // Recalculate average rating
+  const totalRating = product.reviews.reduce((sum, r) => sum + r.rating, 0);
+  product.rating = Math.round((totalRating / product.reviews.length) * 10) / 10;
+
+  await product.save();
+  return product;
+};
+
+export const deleteProductReview = async (productId, userId) => {
+  if (!mongoose.isValidObjectId(productId)) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  const reviewIndex = product.reviews.findIndex(
+    (r) => r.user.toString() === userId.toString()
+  );
+
+  if (reviewIndex === -1) {
+    throw ApiError.notFound("You have not reviewed this product yet");
+  }
+
+  // Remove the review
+  product.reviews.splice(reviewIndex, 1);
+  product.numReviews = product.reviews.length;
+
+  if (product.numReviews === 0) {
+    product.rating = 0;
+  } else {
+    const totalRating = product.reviews.reduce((sum, r) => sum + r.rating, 0);
+    product.rating = Math.round((totalRating / product.numReviews) * 10) / 10;
+  }
+
+  await product.save();
   return product;
 };
