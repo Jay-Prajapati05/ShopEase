@@ -166,12 +166,36 @@ export default function OrderSuccessPage() {
               <div className="flex items-center gap-2">
                 <span className="text-gray-500">Method:</span>
                 <span className="font-semibold text-gray-900">
-                  {order.paymentMethod} (Cash on Delivery)
+                  {order.paymentMethod === "COD"
+                    ? "Cash on Delivery (COD)"
+                    : "Online (Razorpay)"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-500">Status:</span>
-                <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-xs">
+                <span className="text-gray-500">Payment:</span>
+                {order.isPaid ? (
+                  <span className="inline-flex items-center gap-1 font-semibold text-green-700 bg-green-50 px-2.5 py-0.5 rounded-full text-xs">
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                    Paid
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full text-xs">
+                    <Clock className="w-3 h-3" />
+                    Pending / Pay on Delivery
+                  </span>
+                )}
+              </div>
+              {order.paymentResult?.razorpayPaymentId && (
+                <div className="text-xs text-gray-500 pt-0.5">
+                  Txn ID:{" "}
+                  <span className="font-mono font-semibold text-gray-800">
+                    {order.paymentResult.razorpayPaymentId}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">Order Status:</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-full text-xs">
                   <Clock className="w-3 h-3" />
                   {order.orderStatus}
                 </span>

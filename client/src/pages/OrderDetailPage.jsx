@@ -15,18 +15,97 @@ import {
   AlertCircle,
   Copy,
   Check,
+  Lock,
 } from "lucide-react";
 import orderApi from "../api/order.api.js";
+import paymentApi from "../api/payment.api.js";
+import loadRazorpay from "../utils/loadRazorpay.js";
+import { useAuth } from "../hooks/useAuth.js";
 
 // Visual timeline helper
 const STATUS_STEPS = ["Processing", "Shipped", "Delivered"];
 
 export default function OrderDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paying, setPaying] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const handlePayNow = async () => {
+    if (!order) return;
+    setPaymentError("");
+    setPaying(true);
+
+    try {
+      const loaded = await loadRazorpay();
+      if (!loaded) {
+        setPaymentError(
+          "Failed to load Razorpay SDK. Please check your internet connection."
+        );
+        setPaying(false);
+        return;
+      }
+
+      const payRes = await paymentApi.createRazorpayOrder(order._id);
+      const payData = payRes.data;
+
+      const options = {
+        key: payData.keyId,
+        amount: payData.amount,
+        currency: payData.currency,
+        name: "ShopEase",
+        description: `Order #${order._id.slice(-8)}`,
+        order_id: payData.razorpayOrderId,
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: "",
+        },
+        theme: {
+          color: "#f59e0b",
+        },
+        handler: async function (response) {
+          try {
+            const verifyRes = await paymentApi.verifyPayment({
+              orderId: order._id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+
+            setOrder(verifyRes.data?.order || { ...order, isPaid: true, paidAt: new Date() });
+          } catch (err) {
+            setPaymentError(
+              err?.response?.data?.message || "Payment verification failed."
+            );
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setPaying(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (failResponse) {
+        setPaymentError(failResponse.error?.description || "Payment failed");
+        setPaying(false);
+      });
+      rzp.open();
+    } catch (err) {
+      setPaymentError(
+        err?.response?.data?.message || err?.message || "Failed to start payment."
+      );
+      setPaying(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -301,7 +380,9 @@ export default function OrderDetailPage() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Method</span>
                 <span className="font-semibold text-gray-900">
-                  {order.paymentMethod === "COD" ? "Cash on Delivery (COD)" : order.paymentMethod}
+                  {order.paymentMethod === "COD"
+                    ? "Cash on Delivery (COD)"
+                    : "Online (Razorpay)"}
                 </span>
               </div>
 
@@ -312,6 +393,11 @@ export default function OrderDetailPage() {
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Paid on {new Date(order.paidAt).toLocaleDateString("en-IN")}
                   </span>
+                ) : order.paymentMethod === "Razorpay" ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-full">
+                    <Clock className="w-3.5 h-3.5" />
+                    Payment Pending
+                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
                     <Clock className="w-3.5 h-3.5" />
@@ -319,6 +405,44 @@ export default function OrderDetailPage() {
                   </span>
                 )}
               </div>
+
+              {order.paymentResult?.razorpayPaymentId && (
+                <div className="flex justify-between items-center pt-1 border-t border-gray-50">
+                  <span className="text-gray-500 text-xs">Transaction ID</span>
+                  <span className="font-mono text-xs font-semibold text-gray-800">
+                    {order.paymentResult.razorpayPaymentId}
+                  </span>
+                </div>
+              )}
+
+              {/* Pay Now CTA for unpaid Razorpay orders */}
+              {!order.isPaid &&
+                order.paymentMethod === "Razorpay" &&
+                order.orderStatus !== "Cancelled" && (
+                  <div className="pt-3 border-t border-gray-100">
+                    {paymentError && (
+                      <p className="text-xs text-red-600 mb-2">{paymentError}</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handlePayNow}
+                      disabled={paying}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-gray-950 font-black py-2.5 px-4 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50 active:scale-98 text-xs sm:text-sm"
+                    >
+                      {paying ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Connecting to Razorpay...
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4" />
+                          Pay ₹{order.totalPrice?.toLocaleString("en-IN")} Now
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
 
