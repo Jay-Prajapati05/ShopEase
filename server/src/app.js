@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import { sanitizeNoSql } from "./middleware/sanitize.middleware.js";
+import { apiLimiter } from "./middleware/rateLimiter.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 import productRoutes from "./routes/product.routes.js";
@@ -12,9 +15,23 @@ import paymentRoutes from "./routes/payment.routes.js";
 
 const app = express();
 
+// Trust reverse proxy in production (Render, AWS, Nginx) for secure cookies & correct client IP
+app.set("trust proxy", 1);
+
+// HTTP Security Headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
+app.use(sanitizeNoSql);
+
+// General rate limiter across all /api routes
+app.use("/api", apiLimiter);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
