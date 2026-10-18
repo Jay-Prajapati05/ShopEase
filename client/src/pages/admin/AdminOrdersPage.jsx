@@ -211,11 +211,18 @@ export default function AdminOrdersPage() {
                       <td className="py-3.5 px-6">
                         <div className="flex items-center gap-1.5 text-xs text-gray-700">
                           <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{o.paymentMethod}</span>
+                          <span className="font-medium">{o.paymentMethod}</span>
                         </div>
                         <p className="text-[11px] mt-0.5">
                           {o.isPaid ? (
-                            <span className="text-green-600 font-semibold">Paid</span>
+                            <span className="text-green-600 font-semibold">
+                              Paid
+                              {o.paymentResult?.razorpayPaymentId && (
+                                <span className="block font-mono text-[10px] text-gray-500">
+                                  {o.paymentResult.razorpayPaymentId}
+                                </span>
+                              )}
+                            </span>
                           ) : (
                             <span className="text-amber-700 font-medium">Unpaid</span>
                           )}

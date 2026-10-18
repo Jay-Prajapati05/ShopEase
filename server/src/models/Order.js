@@ -67,6 +67,7 @@ export const VALID_TRANSITIONS = Object.freeze({
 // ---------------------------------------------------------------------------
 export const PAYMENT_METHODS = Object.freeze({
   COD: "COD",
+  RAZORPAY: "Razorpay",
 });
 
 // ---------------------------------------------------------------------------
