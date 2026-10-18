@@ -15,6 +15,7 @@ import CheckoutPage from "../pages/CheckoutPage.jsx";
 import OrderSuccessPage from "../pages/OrderSuccessPage.jsx";
 import MyOrdersPage from "../pages/MyOrdersPage.jsx";
 import OrderDetailPage from "../pages/OrderDetailPage.jsx";
+import ProfilePage from "../pages/ProfilePage.jsx";
 
 import AdminLayout from "../components/admin/AdminLayout.jsx";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
@@ -52,6 +53,7 @@ export default function AppRoutes() {
           <Route path="/order/success/:id" element={<OrderSuccessPage />} />
           <Route path="/my-orders" element={<MyOrdersPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
         {/* 404 — must stay last */}

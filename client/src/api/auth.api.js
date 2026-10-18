@@ -37,6 +37,11 @@ export const authApi = {
     });
     return response.data;
   },
+
+  updateProfile: async (profileData) => {
+    const response = await api.put("/auth/profile", profileData);
+    return response.data;
+  },
 };
 
 export default authApi;
