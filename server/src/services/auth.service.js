@@ -259,3 +259,68 @@ export const resetPassword = async (token, newPassword) => {
     message: "Password reset successfully. Please log in with your new password.",
   };
 };
+
+export const updateProfile = async (
+  userId,
+  { name, email, currentPassword, newPassword }
+) => {
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    throw ApiError.notFound("User not found");
+  }
+
+  // 1. Name update
+  if (name !== undefined) {
+    if (typeof name !== "string" || !name.trim()) {
+      throw ApiError.badRequest("Name cannot be empty");
+    }
+    if (name.trim().length > 50) {
+      throw ApiError.badRequest("Name cannot exceed 50 characters");
+    }
+    user.name = name.trim();
+  }
+
+  // 2. Email update
+  if (email !== undefined) {
+    if (typeof email !== "string" || !EMAIL_REGEX.test(email.trim())) {
+      throw ApiError.badRequest("A valid email address is required");
+    }
+    const normalizedEmail = normalizeEmail(email);
+    if (normalizedEmail !== user.email) {
+      const emailExists = await User.exists({
+        email: normalizedEmail,
+        _id: { $ne: user._id },
+      });
+      if (emailExists) {
+        throw ApiError.conflict("Email is already registered with another account");
+      }
+      user.email = normalizedEmail;
+    }
+  }
+
+  // 3. Password update (optional)
+  if (newPassword !== undefined && newPassword !== "") {
+    if (!currentPassword || typeof currentPassword !== "string") {
+      throw ApiError.badRequest("Current password is required to change password");
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      throw ApiError.unauthorized("Current password is incorrect");
+    }
+
+    if (
+      typeof newPassword !== "string" ||
+      newPassword.length < 8 ||
+      newPassword.length > 72
+    ) {
+      throw ApiError.badRequest("New password must be between 8 and 72 characters");
+    }
+
+    user.password = newPassword;
+  }
+
+  await user.save();
+
+  return sanitizeUser(user);
+};
