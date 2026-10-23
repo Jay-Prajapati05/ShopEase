@@ -25,7 +25,26 @@ app.use(
   })
 );
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+const clientUrl = process.env.CLIENT_URL?.replace(/\/$/, "");
+const allowedOrigins = [
+  clientUrl,
+  "https://shop-ease-orpin-alpha.vercel.app",
+  "http://localhost:5173",
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(sanitizeNoSql);
