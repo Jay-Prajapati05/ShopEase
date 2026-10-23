@@ -83,12 +83,12 @@ HTTP Request
 ### 3. Customer Reviews & Verified Buyer Badges
 - 1 to 5 star rating submission with written feedback.
 - Strict constraint: 1 review per user per product.
-- **Verified Buyer Engine:** The system checks if the user has an order containing the product marked as `isPaid: true` or `orderStatus: "Delivered"`. Verified purchasers receive a distinctive green badge with a checkmark.
+- **Strict Verified Buyer Engine (Option B):** Review submission is restricted strictly to verified purchasers who ordered and received the item (`orderStatus: "Delivered"`). Verified purchasers receive a distinctive green badge with a checkmark, while non-purchasing users see an informational lock notice.
 - Dynamic 5-to-1 star percentage breakdown progress bars.
 - Inline editing and deletion with automatic atomic recalculation of aggregate rating and review counters.
 
 ### 4. Cart, Checkout & Orders
-- Client-side persistent cart synchronized with `localStorage` and capped by server inventory.
+- User-isolated persistent cart synchronized with `localStorage` (`shopease_cart_<userId>`), guest cart merge on login, and instant navbar badge reset to 0 on logout.
 - Real-time checkout price breakdown: Subtotal, 5% GST, and Shipping (FREE above ₹500, flat ₹50 otherwise).
 - Delivery address form with real-time field validation.
 - Visual progress stepper on order detail pages (`Processing` ➔ `Shipped` ➔ `Delivered`).
@@ -340,6 +340,7 @@ To promote an account to Admin:
 | **Phase 8** | Razorpay Payments & HMAC-SHA256 Verification | `feature/payments` | ✅ Completed |
 | **Phase 9** | Reviews, Ratings & Customer Profile Management | `feature/reviews-profile` | ✅ Completed |
 | **Phase 10** | Security Hardening, Rate Limiting & `v1.0` Deploy | `chore/hardening` | ✅ Completed |
+| **Post-v1.0** | Cart User Isolation & Strict Verified Buyer Reviews | `fix/cart-and-reviews-policy` | ✅ Completed |
 
 ---
 
