@@ -600,12 +600,12 @@ export default function ProductDetailPage() {
               ) : reviewStatus.isVerifiedBuyer ? (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>You are a verified buyer! Share your honest review below.</span>
+                  <span>You are a verified buyer! Share your review below.</span>
                 </div>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>Share your honest feedback! Verified buyers receive a badge.</span>
+                <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                  <span>Only verified buyers who purchased this product can leave a review.</span>
                 </div>
               )}
             </div>
@@ -613,7 +613,38 @@ export default function ProductDetailPage() {
 
           {/* Right Column: Review Submission Form + Reviews List */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Form */}
+            {/* Informational card for non-buyers (Option B) */}
+            {isAuthenticated && !reviewStatusLoading && !reviewStatus.isVerifiedBuyer && !reviewStatus.hasReviewed && (
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-start gap-3.5 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <ShieldCheck className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Verified Buyers Only</h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Only customers who have purchased and paid for this item can write a review. Once your order is confirmed or delivered, your review form will unlock here automatically!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Informational card for guests */}
+            {!isAuthenticated && (
+              <div className="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-5 text-center shadow-xs">
+                <p className="text-sm font-bold text-slate-900">Want to review this product?</p>
+                <p className="text-xs text-slate-600 mt-1 mb-3">
+                  Only verified buyers who have purchased this item can share reviews.
+                </p>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-gray-950 font-bold text-xs rounded-xl transition-colors shadow-2xs"
+                >
+                  Sign in to check eligibility
+                </Link>
+              </div>
+            )}
+
+            {/* Form (Only for verified buyers who haven't reviewed, or editing existing review) */}
             {isAuthenticated && (reviewStatus.canReview || isEditingReview) && (
               <div
                 id="review-form-card"
