@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import { sanitizeNoSql } from "./middleware/sanitize.middleware.js";
 import { apiLimiter } from "./middleware/rateLimiter.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -13,15 +16,20 @@ import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, "../../client/dist");
+
 const app = express();
 
 // Trust reverse proxy in production (Render, AWS, Nginx) for secure cookies & correct client IP
 app.set("trust proxy", 1);
 
-// HTTP Security Headers
+// HTTP Security Headers (CSP disabled to allow Inter Google font, Cloudinary images, Razorpay script)
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
   })
 );
 
@@ -63,6 +71,20 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
+
+// Serve static client build (Single-Origin SPA)
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback: any non-API GET request serves React index.html (Express 5 named splat)
+  app.get("/{*splat}", (req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+}
+
 // Must stay last
 app.use(notFound);
 app.use(errorHandler);
