@@ -178,13 +178,13 @@ export const getProductReviewStatus = async (productId, userId) => {
   const isVerifiedBuyer = Boolean(
     await Order.exists({
       user: userId,
-      "items.product": productId,
-      $or: [{ isPaid: true }, { status: "Delivered" }],
+      "orderItems.product": productId,
+      $or: [{ isPaid: true }, { orderStatus: "Delivered" }],
     })
   );
 
   return {
-    canReview: !hasReviewed,
+    canReview: isVerifiedBuyer && !hasReviewed,
     hasReviewed,
     isVerifiedBuyer,
   };
@@ -229,14 +229,20 @@ export const createProductReview = async (
     throw ApiError.badRequest("You have already reviewed this product");
   }
 
-  // 3. Verified buyer check
+  // 3. Strict Verified Buyer check (Option B)
   const isVerifiedBuyer = Boolean(
     await Order.exists({
       user: userId,
-      "items.product": productId,
-      $or: [{ isPaid: true }, { status: "Delivered" }],
+      "orderItems.product": productId,
+      $or: [{ isPaid: true }, { orderStatus: "Delivered" }],
     })
   );
+
+  if (!isVerifiedBuyer) {
+    throw ApiError.forbidden(
+      "Only verified buyers who have purchased and received this product can leave a review"
+    );
+  }
 
   // 4. Calculate new aggregate rating and review count
   const newNumReviews = product.reviews.length + 1;
