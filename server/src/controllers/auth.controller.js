@@ -31,8 +31,14 @@ export const refresh = asyncHandler(async (req, res) => {
 
     res.status(200).json(new ApiResponse(200, "Token refreshed", { user }));
   } catch (error) {
-    // Bad or reused token: remove cookies so the browser stops sending them
-    clearAuthCookies(res);
+    // Only wipe cookies when a refresh token was actually received but is
+    // invalid, expired, or reused (genuine session compromise / expiry).
+    // If the cookie was simply absent — e.g. the browser blocked it due to
+    // cross-domain restrictions — do NOT clear cookies; the user is still
+    // legitimately logged in and silently wiping their session would be wrong.
+    if (req.cookies?.[REFRESH_TOKEN_COOKIE]) {
+      clearAuthCookies(res);
+    }
     throw error;
   }
 });

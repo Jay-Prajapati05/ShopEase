@@ -51,9 +51,12 @@ api.interceptors.response.use(
 
         // Retry the original request with newly rotated cookies
         return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh token failed or expired
-        return Promise.reject(refreshError);
+      } catch {
+        // Refresh failed (token expired, missing due to cross-domain block,
+        // or session revoked). Return the *original* 401 error so the caller
+        // sees a clean rejection — callers/UI should handle this by showing
+        // a "session expired" or "please log in" message.
+        return Promise.reject(error);
       }
     }
 
