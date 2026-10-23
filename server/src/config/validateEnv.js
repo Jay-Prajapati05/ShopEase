@@ -3,14 +3,20 @@
  * Ensures the application does not start with missing essential secrets.
  */
 export const validateEnv = () => {
-  const requiredCoreVars = [
-    "MONGODB_URI",
-    "JWT_ACCESS_SECRET",
-    "JWT_REFRESH_SECRET",
-    "CLIENT_URL",
-  ];
+  const missingCore = [];
 
-  const missingCore = requiredCoreVars.filter((v) => !process.env[v]);
+  if (!process.env.MONGODB_URI) missingCore.push("MONGODB_URI");
+  if (!process.env.CLIENT_URL) missingCore.push("CLIENT_URL");
+
+  const hasAccessSecret = !!(
+    process.env.JWT_ACCESS_SECRET || process.env.ACCESS_TOKEN_SECRET
+  );
+  if (!hasAccessSecret) missingCore.push("JWT_ACCESS_SECRET");
+
+  const hasRefreshSecret = !!(
+    process.env.JWT_REFRESH_SECRET || process.env.REFRESH_TOKEN_SECRET
+  );
+  if (!hasRefreshSecret) missingCore.push("JWT_REFRESH_SECRET");
 
   if (missingCore.length > 0) {
     const errorMsg = `[FATAL] Missing required environment variables: ${missingCore.join(", ")}`;
