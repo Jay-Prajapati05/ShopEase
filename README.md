@@ -60,7 +60,7 @@ HTTP Request
 | **Token Storage** | `httpOnly`, `secure`, `SameSite` Cookies | Access tokens (15m) and refresh tokens (7d) are stored in secure cookies, eliminating client-side XSS token theft. |
 | **Session Hijacking** | Refresh Token Rotation & Reuse Detection | Every refresh call atomically issues a new token and revokes the old one. Presenting an old or reused token immediately revokes all active sessions. |
 | **Brute Force & DoS** | Two-Tier Rate Limiting | `apiLimiter` (500 req/15m) protects the general API; `authLimiter` (20 req/15m) strictly throttles `/login`, `/register`, and `/forgot-password`. |
-| **HTTP Headers** | Helmet Middleware | Sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, Content Security Policies, and removes the `X-Powered-By` Express fingerprint. |
+| **HTTP Headers** | Helmet Middleware | Sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Cross-Origin-Opener-Policy: same-origin-allow-popups` (allows Razorpay bank popups), and removes `X-Powered-By`. |
 | **Reverse Proxy** | `trust proxy: 1` | Correctly resolves client IP addresses behind cloud load balancers (Render, Vercel) and enables secure cookie transport over HTTPS. |
 | **NoSQL Injection** | Express 5 Safe Sanitizer | Recursively cleans keys containing `$` or `.` from request bodies and route parameters without mutating read-only `req.query`. |
 | **Account Enumeration** | Constant-Time Comparison | Login endpoints run constant-time dummy bcrypt comparisons for non-existent users; forgot password returns uniform success messages. |
@@ -72,7 +72,7 @@ HTTP Request
 
 ### 1. Authentication & User Profile
 - Dual-token JWT system with automated silent token refresh using a single in-flight promise Axios interceptor.
-- Self-service password recovery using high-entropy 32-byte cryptographic hex tokens (`crypto.randomBytes`), stored as SHA-256 hashes with a 15-minute expiry.
+- Self-service password recovery using high-entropy 32-byte cryptographic hex tokens (`crypto.randomBytes`), stored as SHA-256 hashes with a 15-minute expiry, delivered via Brevo v3 HTTPS REST API (Port 443) with an 8-second timeout guard.
 - Protected `/profile` hub allowing customers to update display names, modify email addresses with duplicate validation, and change passwords requiring current password confirmation.
 
 ### 2. Product Catalog & Live Discovery
@@ -120,7 +120,7 @@ HTTP Request
 | **Security & Hardening** | `helmet`, `express-rate-limit`, `cookie-parser`, `cors` |
 | **File Processing & Media** | Cloudinary v2 SDK, Multer |
 | **Payment Gateway** | Razorpay Node SDK |
-| **Email Service** | `nodemailer` (SMTP with local console fallback) |
+| **Email Service** | Brevo v3 HTTPS REST API (Production), `nodemailer` (SMTP) & console fallback (Dev) |
 | **Frontend Framework** | React 18, Vite 5, React Router 6 |
 | **Styling & Icons** | Tailwind CSS, Lucide React |
 | **HTTP Client** | Axios (with credentials and silent refresh interceptor) |
@@ -252,6 +252,10 @@ CLIENT_URL=http://localhost:5173
 JWT_ACCESS_SECRET=your_super_secret_access_key_min_32_chars
 JWT_REFRESH_SECRET=your_super_secret_refresh_key_min_32_chars
 
+# Email Service (Brevo HTTPS REST API is recommended; SMTP or console fallback in dev)
+BREVO_API_KEY=xkeysib-your_brevo_api_key_here
+BREVO_SENDER_EMAIL=your_verified_brevo_email@gmail.com
+
 # Optional: Email SMTP Configuration (prints reset link to console if omitted in dev)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
@@ -304,22 +308,32 @@ To promote an account to Admin:
 
 ## 🚢 Production Deployment
 
-### Backend (Render)
-1. Create a **Web Service** on [Render](https://render.com).
-2. Root Directory: `server`.
-3. Build Command: `npm install`.
-4. Start Command: `npm start`.
-5. Set all environment variables (`NODE_ENV=production`, `CLIENT_URL=https://your-frontend.vercel.app`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_*`, `RAZORPAY_*`).
-6. *Note:* Render automatically uses a reverse proxy. `app.set("trust proxy", 1)` is already active in `app.js` to support cross-domain HTTPS cookies.
+### Option A: Unified Same-Origin Deployment (Recommended ⭐)
+Both frontend and backend are hosted within a single Render Web Service, elevating all cookies to **First-Party** and eliminating cross-domain cookie restrictions (Chrome Privacy Sandbox, Safari ITP):
 
-### Frontend (Vercel)
-1. Create a **New Project** on [Vercel](https://vercel.com).
-2. Root Directory: `client`.
-3. Framework Preset: `Vite`.
-4. Build Command: `npm run build`.
-5. Output Directory: `dist`.
-6. Add Environment Variable: `VITE_API_URL=https://your-backend.onrender.com/api`.
-7. SPA client-side routing is automatically handled by [`client/vercel.json`](file:///j:/temp/ShopEase/client/vercel.json).
+1. Create a **Web Service** on [Render](https://render.com) connected to the `ShopEase` repository.
+2. **Root Directory:** *Leave blank / empty* (runs from repository root).
+3. **Build Command:**
+   ```bash
+   cd client && npm install --include=dev && npm run build && cd ../server && npm install
+   ```
+4. **Start Command:**
+   ```bash
+   cd server && npm start
+   ```
+5. **Environment Variables:**
+   - `NODE_ENV=production`
+   - `CLIENT_URL=https://<your-render-service>.onrender.com`
+   - `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
+   - `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`
+6. *Architecture:* Express serves static assets from `client/dist` and handles SPA client-side routing via `app.get("/{*splat}")`, while the client automatically targets relative `/api`.
+
+### Option B: Split Deployment (Backend on Render, Frontend on Vercel)
+1. **Backend (Render):** Web Service pointing to `server`, build: `npm install`, start: `npm start`, `CLIENT_URL=https://your-frontend.vercel.app`.
+2. **Frontend (Vercel):** Project pointing to `client`, preset: `Vite`, build: `npm run build`, `VITE_API_URL=https://your-backend.onrender.com/api`.
+3. SPA routing handled by `client/vercel.json`. *Note: Requires custom shared parent domains to prevent modern browser third-party cookie blocking.*
 
 ---
 
@@ -341,6 +355,9 @@ To promote an account to Admin:
 | **Phase 9** | Reviews, Ratings & Customer Profile Management | `feature/reviews-profile` | ✅ Completed |
 | **Phase 10** | Security Hardening, Rate Limiting & `v1.0` Deploy | `chore/hardening` | ✅ Completed |
 | **Post-v1.0** | Cart User Isolation & Strict Verified Buyer Reviews | `fix/cart-and-reviews-policy` | ✅ Completed |
+| **Post-v1.0** | Auth Cookie Refresh Guard & 401 Error Propagation | `fix/auth-cookie-refresh-guard` | ✅ Completed |
+| **Post-v1.0** | Same-Origin Unified Deployment (Express + React SPA) | `feature/render-same-origin-deploy` | ✅ Completed |
+| **Post-v1.0** | Razorpay COOP Popups & Brevo HTTPS Email Delivery | `fix/razorpay-coop-and-email` | ✅ Completed |
 
 ---
 
