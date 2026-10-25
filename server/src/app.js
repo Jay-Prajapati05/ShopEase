@@ -25,10 +25,11 @@ const app = express();
 // Trust reverse proxy in production (Render, AWS, Nginx) for secure cookies & correct client IP
 app.set("trust proxy", 1);
 
-// HTTP Security Headers (CSP disabled to allow Inter Google font, Cloudinary images, Razorpay script)
+// HTTP Security Headers (CSP disabled for CDN assets, COOP set to same-origin-allow-popups for Razorpay 3D Secure / Netbanking frames)
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     contentSecurityPolicy: false,
   })
 );
@@ -38,6 +39,7 @@ const allowedOrigins = [
   clientUrl,
   "https://shop-ease-orpin-alpha.vercel.app",
   "http://localhost:5173",
+  "http://localhost:8000",
 ].filter(Boolean);
 
 app.use(
