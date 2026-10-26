@@ -1,6 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
+import authApi from "../api/auth.api.js";
+
+const PHONE_REGEX = /^[6-9]\d{9}$/;
+
+const emptyAddress = {
+  address: "",
+  city: "",
+  postalCode: "",
+  country: "India",
+  phone: "",
+  altPhone: "",
+};
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
@@ -20,12 +32,90 @@ export default function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  // Saved address state
+  const [addressForm, setAddressForm] = useState(emptyAddress);
+  const [addressLoading, setAddressLoading] = useState(true);
+  const [addressSaving, setAddressSaving] = useState(false);
+  const [addressSuccess, setAddressSuccess] = useState("");
+  const [addressError, setAddressError] = useState("");
+  const [addressFieldErrors, setAddressFieldErrors] = useState({});
+
   useEffect(() => {
     if (user) {
       setName(user.name || "");
       setEmail(user.email || "");
     }
   }, [user]);
+
+  // Fetch saved address on mount
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        setAddressLoading(true);
+        const res = await authApi.getSavedAddress();
+        const addr = res?.data?.address;
+        if (addr) setAddressForm({ ...emptyAddress, ...addr });
+      } catch {
+        // silent — user may not have an address yet
+      } finally {
+        setAddressLoading(false);
+      }
+    };
+    fetchAddress();
+  }, []);
+
+  const handleAddressChange = (e) => {
+    const { name, value } = e.target;
+    setAddressForm((prev) => ({ ...prev, [name]: value }));
+    if (addressFieldErrors[name]) {
+      setAddressFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+    if (addressError) setAddressError("");
+  };
+
+  const validateAddress = () => {
+    const errs = {};
+    if (!addressForm.address.trim()) errs.address = "Street address is required";
+    if (!addressForm.city.trim()) errs.city = "City is required";
+    if (!addressForm.postalCode.trim()) {
+      errs.postalCode = "Postal code is required";
+    } else if (!/^[0-9]{4,10}$/.test(addressForm.postalCode.trim())) {
+      errs.postalCode = "Must be 4–10 digits";
+    }
+    if (!addressForm.country.trim()) errs.country = "Country is required";
+    if (!addressForm.phone.trim()) {
+      errs.phone = "Phone number is required";
+    } else if (!PHONE_REGEX.test(addressForm.phone.trim())) {
+      errs.phone = "Valid 10-digit Indian mobile (starts 6–9)";
+    }
+    if (addressForm.altPhone.trim() && !PHONE_REGEX.test(addressForm.altPhone.trim())) {
+      errs.altPhone = "Valid 10-digit Indian mobile (starts 6–9)";
+    }
+    setAddressFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    setAddressError("");
+    setAddressSuccess("");
+    if (!validateAddress()) return;
+    try {
+      setAddressSaving(true);
+      await authApi.updateSavedAddress(addressForm);
+      setAddressSuccess("Delivery address saved successfully!");
+      setTimeout(() => setAddressSuccess(""), 4000);
+    } catch (err) {
+      const errData = err?.response?.data;
+      if (errData?.errors?.length) {
+        setAddressError(errData.errors.join(" · "));
+      } else {
+        setAddressError(errData?.message || "Failed to save address");
+      }
+    } finally {
+      setAddressSaving(false);
+    }
+  };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -266,6 +356,173 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* ── Saved Delivery Address Form ── */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">
+              Saved Delivery Address
+            </h2>
+            <p className="text-xs text-slate-500 mb-6">
+              Your delivery address is auto-filled at checkout. Phone number is required for delivery contact.
+            </p>
+
+            {addressSuccess && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                {addressSuccess}
+              </div>
+            )}
+            {addressError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-lg">
+                {addressError}
+              </div>
+            )}
+
+            {addressLoading ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-10 bg-slate-100 rounded-lg" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="h-10 bg-slate-100 rounded-lg" />
+                  <div className="h-10 bg-slate-100 rounded-lg" />
+                </div>
+                <div className="h-10 bg-slate-100 rounded-lg" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="h-10 bg-slate-100 rounded-lg" />
+                  <div className="h-10 bg-slate-100 rounded-lg" />
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSaveAddress} className="space-y-4" noValidate>
+                {/* Street Address */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Street Address / Flat / Area *
+                  </label>
+                  <input
+                    name="address"
+                    type="text"
+                    placeholder="e.g. 123 MG Road, 2nd Floor"
+                    value={addressForm.address}
+                    onChange={handleAddressChange}
+                    disabled={addressSaving}
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                      addressFieldErrors.address ? "border-red-300 bg-red-50" : "border-slate-300"
+                    }`}
+                  />
+                  {addressFieldErrors.address && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.address}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* City */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">City *</label>
+                    <input
+                      name="city"
+                      type="text"
+                      placeholder="e.g. Bangalore"
+                      value={addressForm.city}
+                      onChange={handleAddressChange}
+                      disabled={addressSaving}
+                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                        addressFieldErrors.city ? "border-red-300 bg-red-50" : "border-slate-300"
+                      }`}
+                    />
+                    {addressFieldErrors.city && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.city}</p>}
+                  </div>
+
+                  {/* Postal Code */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Postal Code / PIN *</label>
+                    <input
+                      name="postalCode"
+                      type="text"
+                      placeholder="e.g. 560001"
+                      value={addressForm.postalCode}
+                      onChange={handleAddressChange}
+                      disabled={addressSaving}
+                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                        addressFieldErrors.postalCode ? "border-red-300 bg-red-50" : "border-slate-300"
+                      }`}
+                    />
+                    {addressFieldErrors.postalCode && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.postalCode}</p>}
+                  </div>
+                </div>
+
+                {/* Country */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Country *</label>
+                  <input
+                    name="country"
+                    type="text"
+                    value={addressForm.country}
+                    onChange={handleAddressChange}
+                    disabled={addressSaving}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                  {addressFieldErrors.country && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.country}</p>}
+                </div>
+
+                {/* Phone Numbers */}
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">📞 Contact for Delivery</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Phone Number *</label>
+                      <input
+                        name="phone"
+                        type="tel"
+                        placeholder="e.g. 9876543210"
+                        maxLength={10}
+                        value={addressForm.phone}
+                        onChange={handleAddressChange}
+                        disabled={addressSaving}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                          addressFieldErrors.phone ? "border-red-300 bg-red-50" : "border-slate-300"
+                        }`}
+                      />
+                      {addressFieldErrors.phone && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.phone}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Alternate Phone{" "}
+                        <span className="text-slate-400 font-normal normal-case">(optional)</span>
+                      </label>
+                      <input
+                        name="altPhone"
+                        type="tel"
+                        placeholder="e.g. 9123456789"
+                        maxLength={10}
+                        value={addressForm.altPhone}
+                        onChange={handleAddressChange}
+                        disabled={addressSaving}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                          addressFieldErrors.altPhone ? "border-red-300 bg-red-50" : "border-slate-300"
+                        }`}
+                      />
+                      {addressFieldErrors.altPhone && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.altPhone}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={addressSaving}
+                    className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-60 flex items-center gap-2"
+                  >
+                    {addressSaving ? (
+                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</>
+                    ) : (
+                      "Save Address"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           {/* Password Security Form */}

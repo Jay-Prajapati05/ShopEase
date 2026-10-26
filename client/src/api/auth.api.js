@@ -42,6 +42,16 @@ export const authApi = {
     const response = await api.put("/auth/profile", profileData);
     return response.data;
   },
+
+  getSavedAddress: async () => {
+    const response = await api.get("/auth/address");
+    return response.data;
+  },
+
+  updateSavedAddress: async (addressData) => {
+    const response = await api.put("/auth/address", addressData);
+    return response.data;
+  },
 };
 
 export default authApi;

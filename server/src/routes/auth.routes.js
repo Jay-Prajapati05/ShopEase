@@ -8,6 +8,8 @@ import {
   forgotPassword,
   resetPassword,
   updateProfile,
+  getSavedAddress,
+  updateSavedAddress,
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { authLimiter } from "../middleware/rateLimiter.middleware.js";
@@ -22,5 +24,9 @@ router.get("/me", protect, getMe);
 router.put("/profile", protect, updateProfile);
 router.post("/forgot-password", authLimiter, forgotPassword);
 router.post("/reset-password/:token", authLimiter, resetPassword);
+
+// Saved delivery address (requires login)
+router.get("/address", protect, getSavedAddress);
+router.put("/address", protect, updateSavedAddress);
 
 export default router;

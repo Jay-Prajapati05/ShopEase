@@ -86,3 +86,24 @@ export const updateProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, "Profile updated successfully", { user }));
 });
+
+export const getSavedAddress = asyncHandler(async (req, res) => {
+  const address = await authService.getSavedAddress(req.user._id);
+
+  res.status(200).json(new ApiResponse(200, "Saved address fetched", { address }));
+});
+
+export const updateSavedAddress = asyncHandler(async (req, res) => {
+  const { address, city, postalCode, country, phone, altPhone } = req.body ?? {};
+
+  const saved = await authService.updateSavedAddress(req.user._id, {
+    address,
+    city,
+    postalCode,
+    country,
+    phone,
+    altPhone,
+  });
+
+  res.status(200).json(new ApiResponse(200, "Address saved successfully", { address: saved }));
+});

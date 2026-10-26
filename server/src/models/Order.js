@@ -37,6 +37,10 @@ const shippingAddressSchema = new mongoose.Schema(
     city:       { type: String, required: true, trim: true, maxlength: 100 },
     postalCode: { type: String, required: true, trim: true, maxlength: 20  },
     country:    { type: String, required: true, trim: true, maxlength: 100 },
+    // Phone number is required so the delivery agent can contact the customer.
+    // altPhone is an optional backup number.
+    phone:      { type: String, required: true, trim: true, maxlength: 15 },
+    altPhone:   { type: String, trim: true, maxlength: 15 },
   },
   { _id: false },
 );
