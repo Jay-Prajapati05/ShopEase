@@ -5,9 +5,67 @@ import ApiError from "../utils/ApiError.js";
 // ---------------------------------------------------------------------------
 // Configuration & Constants
 // ---------------------------------------------------------------------------
-const GEMINI_MODEL = "gemini-1.5-flash";
+const DEFAULT_FALLBACK_MODEL = "gemini-flash-lite-latest";
 const MAX_OUTPUT_TOKENS = 300;
-const AI_TIMEOUT_MS = 10000; // 10-second bounded timeout
+const AI_TIMEOUT_MS = 30000; // 30-second bounded timeout
+
+let cachedActiveModel = null;
+
+/**
+ * Resolves an active Gemini model supporting generateContent.
+ * 1. Honors explicit process.env.GEMINI_MODEL if defined.
+ * 2. Uses cached model if already discovered.
+ * 3. Dynamically queries ModelService ListModels to find active Flash model for the key (prioritizing gemini-flash-lite-latest).
+ * 4. Falls back to "gemini-flash-lite-latest" if discovery fails.
+ *
+ * @param {string} apiKey
+ * @returns {Promise<string>}
+ */
+export async function resolveActiveModel(apiKey) {
+  if (process.env.GEMINI_MODEL) {
+    return process.env.GEMINI_MODEL;
+  }
+  if (cachedActiveModel) {
+    return cachedActiveModel;
+  }
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const contentModels = (data.models || []).filter((m) =>
+        m.supportedGenerationMethods?.includes("generateContent")
+      );
+
+      // Prioritize ultra-fast, low-latency Flash models for real-time shopping assistant
+      const chosen =
+        contentModels.find((m) => m.name === "models/gemini-flash-lite-latest") ||
+        contentModels.find((m) => m.name === "models/gemini-flash-latest") ||
+        contentModels.find((m) => m.name.includes("3.5-flash-lite")) ||
+        contentModels.find((m) => m.name.includes("3.1-flash-lite")) ||
+        contentModels.find((m) => m.name.includes("flash-lite")) ||
+        contentModels.find((m) => m.name.includes("3.5-flash")) ||
+        contentModels[0];
+
+      if (chosen) {
+        cachedActiveModel = chosen.name.replace(/^models\//, "");
+        console.log(`[AI Service]: Auto-detected active Gemini model "${cachedActiveModel}"`);
+        return cachedActiveModel;
+      }
+    }
+  } catch (err) {
+    console.warn(
+      `[AI Service]: Model auto-detection failed, falling back to ${DEFAULT_FALLBACK_MODEL}:`,
+      err?.message
+    );
+  }
+
+  cachedActiveModel = DEFAULT_FALLBACK_MODEL;
+  return cachedActiveModel;
+}
 
 // Regex patterns for Sensitive Output Inspection (Security Requirement 5)
 const SENSITIVE_PATTERNS = [
@@ -150,10 +208,11 @@ export const chatWithAssistant = async ({ message, history = [], user = null }) 
   // 2. Assemble server-controlled System Instruction
   const systemInstruction = buildSystemInstruction(inStockProducts, user);
 
-  // 3. Initialize Gemini 1.5 Flash client
+  // 3. Initialize Gemini client with dynamically resolved active model
+  const activeModel = await resolveActiveModel(apiKey);
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
+    model: activeModel,
     systemInstruction,
     generationConfig: {
       maxOutputTokens: MAX_OUTPUT_TOKENS,
@@ -184,25 +243,55 @@ export const chatWithAssistant = async ({ message, history = [], user = null }) 
       )
     );
 
+    console.log(`[AI Service]: Sending prompt to ${activeModel}...`);
+    const startTime = Date.now();
     const generatePromise = model.generateContent({ contents });
 
     const result = await Promise.race([generatePromise, timeoutPromise]);
     const response = await result.response;
     rawOutput = response.text();
+    console.log(
+      `[AI Service]: Gemini replied successfully in ${(
+        (Date.now() - startTime) /
+        1000
+      ).toFixed(1)}s`
+    );
   } catch (err) {
     if (err.message === "AI_TIMEOUT") {
       throw ApiError.internal("AI Assistant request timed out. Please try again.");
     }
 
+    const rawErrMsg = err?.message || String(err);
+    // Redact any API key in query parameters to uphold Rule 6
+    const sanitizedErrMsg = rawErrMsg.replace(/key=[^&\s]+/gi, "key=[REDACTED]");
+    console.error("[AI Service Error]:", sanitizedErrMsg);
+
     // Handle provider quota / rate limit errors gracefully without leaking keys
-    const errMsg = err?.message || "";
-    if (errMsg.includes("429") || errMsg.includes("Quota") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+    if (
+      sanitizedErrMsg.includes("429") ||
+      sanitizedErrMsg.includes("Quota") ||
+      sanitizedErrMsg.includes("RESOURCE_EXHAUSTED")
+    ) {
       throw ApiError.tooManyRequests(
         "AI Assistant is receiving high traffic right now. Please wait a minute and try again."
       );
     }
 
-    throw ApiError.internal("Unable to generate response from AI Assistant at this time.");
+    // Handle invalid / expired API key gracefully
+    if (
+      sanitizedErrMsg.includes("API key not valid") ||
+      sanitizedErrMsg.includes("API_KEY_INVALID")
+    ) {
+      throw ApiError.serviceUnavailable(
+        "Invalid Gemini API key configured. Please verify your GEMINI_API_KEY in server/.env."
+      );
+    }
+
+    throw ApiError.internal(
+      process.env.NODE_ENV === "production"
+        ? "Unable to generate response from AI Assistant at this time."
+        : `AI Assistant Error: ${sanitizedErrMsg}`
+    );
   }
 
   // 6. Inspect Generated Output for Sensitive Information (Security Requirement 5)
@@ -230,4 +319,5 @@ export default {
   isOutputSafe,
   resolveRecommendedProducts,
   buildSystemInstruction,
+  resolveActiveModel,
 };
