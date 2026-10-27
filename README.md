@@ -358,6 +358,7 @@ Both frontend and backend are hosted within a single Render Web Service, elevati
 | **Post-v1.0** | Auth Cookie Refresh Guard & 401 Error Propagation | `fix/auth-cookie-refresh-guard` | ✅ Completed |
 | **Post-v1.0** | Same-Origin Unified Deployment (Express + React SPA) | `feature/render-same-origin-deploy` | ✅ Completed |
 | **Post-v1.0** | Razorpay COOP Popups & Brevo HTTPS Email Delivery | `fix/razorpay-coop-and-email` | ✅ Completed |
+| **Post-v1.0** | Saved Address, Phone Verification & Mongoose Modernization | `feature/saved-address-and-phone` | ✅ Completed |
 
 ---
 
