@@ -69,12 +69,12 @@ export async function resolveActiveModel(apiKey) {
 
 // Regex patterns for Sensitive Output Inspection (Security Requirement 5)
 const SENSITIVE_PATTERNS = [
-  /AIza[0-9A-Za-z-_]{35}/,                     // Google API Keys
+  /AIza[0-9A-Za-z-_]{30,}/,                     // Google API Keys (AIza followed by 30+ chars)
   /sk-[a-zA-Z0-9_-]{20,}/,                     // OpenAI / Generic API keys
   /Bearer\s+[A-Za-z0-9._-]+/i,                 // Bearer Auth Tokens
   /eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/, // JWT Tokens
   /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/, // Private Emails
-  /\b(?:\+91|0)?[6-9]\d{9}\b/,                 // Indian Mobile Numbers
+  /(?:^|\D)(?:\+91[\s-]?)?[6-9]\d{9}\b/,        // Indian Mobile Numbers (+91 or standard 10 digits)
   /(?:password|hash|mongodb\+srv|secret_key)/i, // Internal Credential Keywords
 ];
 
