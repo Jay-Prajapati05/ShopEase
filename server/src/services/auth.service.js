@@ -106,7 +106,7 @@ export const refresh = async (refreshToken) => {
   const user = await User.findOneAndUpdate(
     { _id: decoded.sub, refreshTokenHash: hashToken(refreshToken) },
     { refreshTokenHash: hashToken(tokens.refreshToken) },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!user) {
@@ -323,4 +323,79 @@ export const updateProfile = async (
   await user.save();
 
   return sanitizeUser(user);
+};
+
+// ---------------------------------------------------------------------------
+// Phone number regex: Indian mobile numbers starting with 6–9, exactly 10 digits.
+// ---------------------------------------------------------------------------
+const PHONE_REGEX = /^[6-9]\d{9}$/;
+
+// ---------------------------------------------------------------------------
+// getSavedAddress
+// Returns the user's saved delivery address (or an empty object if not set yet).
+// ---------------------------------------------------------------------------
+export const getSavedAddress = async (userId) => {
+  const user = await User.findById(userId).select("savedAddress");
+  if (!user) throw ApiError.notFound("User not found");
+
+  // Return the saved address or sensible empty defaults
+  return user.savedAddress ?? {};
+};
+
+// ---------------------------------------------------------------------------
+// updateSavedAddress
+// Validates and persists the user's saved delivery address.
+// phone is mandatory; altPhone is optional.
+// ---------------------------------------------------------------------------
+export const updateSavedAddress = async (userId, fields) => {
+  const { address, city, postalCode, country, phone, altPhone } = fields ?? {};
+
+  const errors = [];
+
+  if (!address || typeof address !== "string" || !address.trim()) {
+    errors.push("Street address is required");
+  }
+  if (!city || typeof city !== "string" || !city.trim()) {
+    errors.push("City is required");
+  }
+  if (!postalCode || typeof postalCode !== "string" || !postalCode.trim()) {
+    errors.push("Postal code is required");
+  } else if (!/^[0-9]{4,10}$/.test(postalCode.trim())) {
+    errors.push("Postal code must be 4–10 digits");
+  }
+  if (!country || typeof country !== "string" || !country.trim()) {
+    errors.push("Country is required");
+  }
+
+  // Mandatory phone number
+  if (!phone || typeof phone !== "string" || !phone.trim()) {
+    errors.push("Phone number is required");
+  } else if (!PHONE_REGEX.test(phone.trim())) {
+    errors.push("Phone number must be a valid 10-digit Indian mobile number starting with 6–9");
+  }
+
+  // Optional alternate phone — only validate if provided
+  if (altPhone && altPhone.trim() && !PHONE_REGEX.test(altPhone.trim())) {
+    errors.push("Alternate phone number must be a valid 10-digit Indian mobile number starting with 6–9");
+  }
+
+  if (errors.length > 0) {
+    throw ApiError.badRequest("Address validation failed", errors);
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw ApiError.notFound("User not found");
+
+  user.savedAddress = {
+    address:    address.trim(),
+    city:       city.trim(),
+    postalCode: postalCode.trim(),
+    country:    country.trim(),
+    phone:      phone.trim(),
+    altPhone:   altPhone ? altPhone.trim() : "",
+  };
+
+  await user.save();
+
+  return user.savedAddress;
 };

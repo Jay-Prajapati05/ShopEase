@@ -40,6 +40,20 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+
+    // -----------------------------------------------------------------------
+    // Saved Delivery Address
+    // Persisted so the user does not have to re-type it on every checkout.
+    // phone is mandatory; altPhone is optional backup for the delivery agent.
+    // -----------------------------------------------------------------------
+    savedAddress: {
+      address:    { type: String, trim: true, maxlength: 200, default: "" },
+      city:       { type: String, trim: true, maxlength: 100, default: "" },
+      postalCode: { type: String, trim: true, maxlength: 20,  default: "" },
+      country:    { type: String, trim: true, maxlength: 100, default: "India" },
+      phone:      { type: String, trim: true, maxlength: 15,  default: "" }, // mandatory at checkout
+      altPhone:   { type: String, trim: true, maxlength: 15,  default: "" }, // optional
+    },
   },
   { timestamps: true }
 );

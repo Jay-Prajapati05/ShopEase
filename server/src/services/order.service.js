@@ -68,18 +68,32 @@ function validateItems(items) {
   }
 }
 
+const PHONE_REGEX = /^[6-9]\d{9}$/;
+
 function validateShippingAddress(addr) {
   if (!addr || typeof addr !== "object") {
     throw ApiError.badRequest("shippingAddress is required");
   }
 
-  const required = ["address", "city", "postalCode", "country"];
+  const required = ["address", "city", "postalCode", "country", "phone"];
   const missing = required.filter(
     (f) => !addr[f] || typeof addr[f] !== "string" || !addr[f].trim(),
   );
   if (missing.length) {
     throw ApiError.badRequest(
       `shippingAddress missing required fields: ${missing.join(", ")}`,
+    );
+  }
+
+  if (!PHONE_REGEX.test(addr.phone.trim())) {
+    throw ApiError.badRequest(
+      "shippingAddress.phone must be a valid 10-digit Indian mobile number starting with 6-9",
+    );
+  }
+
+  if (addr.altPhone && addr.altPhone.trim() && !PHONE_REGEX.test(addr.altPhone.trim())) {
+    throw ApiError.badRequest(
+      "shippingAddress.altPhone must be a valid 10-digit Indian mobile number starting with 6-9",
     );
   }
 }
@@ -102,7 +116,7 @@ function validatePaymentMethod(method) {
  * @param {string}  userId
  * @param {object}  payload
  * @param {Array}   payload.items           [{ productId, qty }]
- * @param {object}  payload.shippingAddress { address, city, postalCode, country }
+ * @param {object}  payload.shippingAddress { address, city, postalCode, country, phone, altPhone }
  * @param {string}  payload.paymentMethod   "COD" (only for now)
  * @returns {Promise<Order>}
  *
@@ -194,7 +208,7 @@ export const createOrder = async (userId, payload) => {
     const updated = await Product.findOneAndUpdate(
       { _id: item.product, countInStock: { $gte: item.qty } },
       { $inc: { countInStock: -item.qty } },
-      { new: false }, // we only need to know whether the doc was found
+      { returnDocument: "before" }, // we only need to know whether the doc was found
     );
 
     if (!updated) {
@@ -220,6 +234,8 @@ export const createOrder = async (userId, payload) => {
         city:       shippingAddress.city.trim(),
         postalCode: shippingAddress.postalCode.trim(),
         country:    shippingAddress.country.trim(),
+        phone:      shippingAddress.phone.trim(),
+        altPhone:   shippingAddress.altPhone ? shippingAddress.altPhone.trim() : "",
       },
       paymentMethod,
       itemsPrice,

@@ -269,7 +269,7 @@ export const createProductReview = async (
       $push: { reviews: newReview },
       $set: { rating: newAvgRating, numReviews: newNumReviews },
     },
-    { new: true, select: "-__v" }
+    { returnDocument: "after", select: "-__v" }
   );
 
   if (!updatedProduct) {
