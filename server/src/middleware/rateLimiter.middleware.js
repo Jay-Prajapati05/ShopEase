@@ -36,3 +36,20 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   handler: createRateLimitHandler("Too many authentication attempts. Please try again after 15 minutes."),
 });
+
+/**
+ * AI Assistant Rate Limiter (Security Requirement 4):
+ * Protects Gemini quota, wallet costs, and prevents automated DoS.
+ * - Guests: max 20 queries per 10 minutes per IP.
+ * - Authenticated Customers: max 40 queries per 10 minutes per user ID.
+ */
+export const aiLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: (req) => (req.user ? 40 : 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user ? `ai_user_${req.user._id}` : req.ip),
+  handler: createRateLimitHandler(
+    "AI assistant query limit reached. Please wait a few minutes before sending more messages."
+  ),
+});
