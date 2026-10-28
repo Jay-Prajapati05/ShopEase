@@ -1,11 +1,13 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar.jsx";
 import Footer from "./Footer.jsx";
+import AIChatbot from "../features/ai/AIChatbot.jsx";
 
 /**
  * MainLayout wraps every public and protected page with
  * the shared Navbar at the top and Footer at the bottom.
  * <Outlet /> is where the matched child route renders.
+ * <AIChatbot /> mounts the floating AI shopping assistant across the customer storefront.
  */
 export default function MainLayout() {
   return (
@@ -15,6 +17,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <Footer />
+      <AIChatbot />
     </div>
   );
 }
