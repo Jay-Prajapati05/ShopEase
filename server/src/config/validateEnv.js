@@ -32,6 +32,7 @@ export const validateEnv = () => {
       "CLOUDINARY_API_SECRET",
       "RAZORPAY_KEY_ID",
       "RAZORPAY_KEY_SECRET",
+      "GEMINI_API_KEY",
     ];
 
     const missingProd = requiredProdVars.filter((v) => !process.env[v]);

@@ -26,3 +26,24 @@ export const authorize =
     }
     next();
   };
+
+/**
+ * Optional Authentication Middleware:
+ * If an access token cookie is present and valid, attaches req.user.
+ * If token is missing, expired, or invalid, gracefully continues as a guest.
+ * Never throws 401, making it ideal for public endpoints (like AI chatbot)
+ * that offer enhanced features or rate limits for logged-in users.
+ */
+export const optionalAuth = asyncHandler(async (req, res, next) => {
+  const token = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  if (!token) return next();
+
+  try {
+    const decoded = verifyAccessToken(token);
+    const user = await User.findById(decoded.sub);
+    if (user) req.user = user;
+  } catch {
+    // Gracefully treat as unauthenticated guest
+  }
+  next();
+});

@@ -65,6 +65,7 @@ HTTP Request
 | **NoSQL Injection** | Express 5 Safe Sanitizer | Recursively cleans keys containing `$` or `.` from request bodies and route parameters without mutating read-only `req.query`. |
 | **Account Enumeration** | Constant-Time Comparison | Login endpoints run constant-time dummy bcrypt comparisons for non-existent users; forgot password returns uniform success messages. |
 | **Payment Tampering** | Cryptographic HMAC-SHA256 Verification | Razorpay payment signatures are validated using Node's `crypto.timingSafeEqual` with buffer length matching to prevent timing attacks. |
+| **AI Assistant Guardrails** | Grounded RAG-lite & Output Scanner | In-stock catalog projection (`countInStock > 0`), trusted DB product card mapping, sensitive regex output scanner (API keys, JWTs, PII), prompt injection defenses, and IPv6 rate limiting. |
 
 ---
 
@@ -108,6 +109,14 @@ HTTP Request
 - **User Directory:** Paginated user administration with role badges and protection against administrator self-deletion or last-admin lockout.
 - **Sticky Viewport Layout:** Viewport-constrained sidebar (`h-screen max-h-screen md:sticky md:top-0`) with global breadcrumbs and "Back to Store" navigation bar.
 
+### 7. Google Gemini AI Shopping Assistant (RAG-lite)
+- **Floating Interactive Assistant:** Accessible across all storefront routes via a floating launcher button (`fixed bottom-6 right-6`) with mobile-responsive bottom-anchored drawer, backdrop dismiss, and persistent suggestion chips.
+- **Zero Frontend Secret Exposure:** The `GEMINI_API_KEY` lives strictly on the server. Frontend makes authenticated requests to relative `/api/ai/chat`.
+- **Grounded Catalog Recommendations:** Server projects live in-stock products into the system instruction. The model emits `[PRODUCT: <id>]` tags which backend verifies against database records to attach trusted product mini-cards (image, title, price, star rating, direct link).
+- **Sensitive Output Scanner (`isOutputSafe`):** Regular expressions inspect AI text for API keys, Bearer tokens, JWTs, emails, Indian phone numbers, or database credentials before returning responses.
+- **Dual-Tier IPv6 Rate Limiting:** 20 queries / 10m for guest visitors, 40 queries / 10m for authenticated customers, protected against IPv6 subnet rotation using `ipKeyGenerator`.
+- **Automated Security Test Suite:** 20 programmatic security regression tests (`node server/tests/ai-security.test.js`) verifying prompt injection defense, input bounds, output safety, and trusted card resolution.
+
 ---
 
 ## 🛠️ Tech Stack & Dependencies
@@ -120,6 +129,7 @@ HTTP Request
 | **Security & Hardening** | `helmet`, `express-rate-limit`, `cookie-parser`, `cors` |
 | **File Processing & Media** | Cloudinary v2 SDK, Multer |
 | **Payment Gateway** | Razorpay Node SDK |
+| **AI Engine & SDK** | Google Gemini 1.5/Flash-Lite API (`@google/generative-ai`) with dynamic model discovery |
 | **Email Service** | Brevo v3 HTTPS REST API (Production), `nodemailer` (SMTP) & console fallback (Dev) |
 | **Frontend Framework** | React 18, Vite 5, React Router 6 |
 | **Styling & Icons** | Tailwind CSS, Lucide React |
@@ -222,6 +232,11 @@ All API routes are prefixed with `/api`.
 | `GET` | `/users` | Admin | Paginated user management directory |
 | `DELETE` | `/users/:id` | Admin | Delete user (guards self-deletion and last admin) |
 
+### AI Shopping Assistant (`/api/ai`)
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/ai/chat` | Public (`optionalAuth`, `aiLimiter`) | AI shopping queries (1-500 chars message, max 10 turns history). Grounded in live in-stock catalog with trusted product cards. |
+
 ---
 
 ## ⚙️ Local Development Setup
@@ -271,6 +286,10 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 # Razorpay Online Payment Gateway (Phase 8 - Online Payments)
 RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
+# Google Gemini AI Shopping Assistant
+GEMINI_API_KEY=your_gemini_api_key_here
+# Optional: GEMINI_MODEL=gemini-flash-lite-latest (auto-discovered if omitted)
 ```
 
 Start the backend development server:
