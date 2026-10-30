@@ -59,6 +59,17 @@ const productSchema = new mongoose.Schema(
       required: [true, "Price is required"],
       min: [0, "Price cannot be negative"],
     },
+    originalPrice: {
+      type: Number,
+      min: [0, "Original price cannot be negative"],
+      validate: {
+        validator: function (val) {
+          if (val === undefined || val === null) return true;
+          return val >= this.price;
+        },
+        message: "Original price (MRP) must be greater than or equal to selling price",
+      },
+    },
     category: {
       type: String,
       required: [true, "Category is required"],

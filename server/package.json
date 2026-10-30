@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "node tests/ai-security.test.js"
+    "test": "node tests/ai-security.test.js",
+    "seed": "node src/scripts/seed.js",
+    "seed:destroy": "node src/scripts/seed.js --destroy"
   },
   "keywords": [],
   "author": "",
