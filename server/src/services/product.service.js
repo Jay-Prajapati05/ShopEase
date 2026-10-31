@@ -10,6 +10,7 @@ const WRITABLE_FIELDS = [
   "name",
   "description",
   "price",
+  "originalPrice",
   "category",
   "brand",
   "images",
@@ -21,6 +22,7 @@ const SORT_OPTIONS = {
   price_asc: { price: 1 },
   price_desc: { price: -1 },
   name_asc: { name: 1 },
+  rating_desc: { rating: -1 },
 };
 
 const DEFAULT_LIMIT = 12;
@@ -116,6 +118,24 @@ export const getProductById = async (id) => {
   const product = await Product.findById(id).select("-__v").lean();
   if (!product) throw ApiError.notFound("Product not found");
   return product;
+};
+
+const BESTSELLER_LIMIT = 10;
+const MIN_REVIEWS_FOR_BESTSELLER = 1;
+
+export const getBestsellerProducts = async () => {
+  // Returns top-rated, in-stock products with at least one review.
+  // Simple find+sort — no aggregation needed; fast on indexed `rating` field.
+  const products = await Product.find({
+    countInStock: { $gt: 0 },
+    numReviews: { $gte: MIN_REVIEWS_FOR_BESTSELLER },
+  })
+    .sort({ rating: -1, numReviews: -1 })
+    .limit(BESTSELLER_LIMIT)
+    .select("-__v")
+    .lean();
+
+  return products;
 };
 
 export const createProduct = async (body) => {
