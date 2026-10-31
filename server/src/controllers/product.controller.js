@@ -18,6 +18,14 @@ export const getCategories = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Categories fetched", { categories }));
 });
 
+export const getBestsellers = asyncHandler(async (req, res) => {
+  const products = await productService.getBestsellerProducts();
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Bestsellers fetched", { products }));
+});
+
 export const getProduct = asyncHandler(async (req, res) => {
   const product = await productService.getProductById(req.params.id);
 

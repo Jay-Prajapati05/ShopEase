@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getProducts,
   getCategories,
+  getBestsellers,
   getProduct,
   createProduct,
   updateProduct,
@@ -19,6 +20,7 @@ const adminOnly = [protect, authorize(USER_ROLES.ADMIN)];
 
 router.get("/", getProducts);
 router.get("/categories", getCategories); // must stay above /:id
+router.get("/bestsellers", getBestsellers); // must stay above /:id
 router.get("/:id", getProduct);
 
 router.get("/:id/review-status", protect, getReviewStatus);
