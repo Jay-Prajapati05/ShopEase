@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout.jsx";
 import PrivateRoute from "./PrivateRoute.jsx";
@@ -17,22 +18,82 @@ import MyOrdersPage from "../pages/MyOrdersPage.jsx";
 import OrderDetailPage from "../pages/OrderDetailPage.jsx";
 import ProfilePage from "../pages/ProfilePage.jsx";
 
-import AdminLayout from "../components/admin/AdminLayout.jsx";
-import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
-import AdminProductsPage from "../pages/admin/AdminProductsPage.jsx";
-import AdminOrdersPage from "../pages/admin/AdminOrdersPage.jsx";
-import AdminUsersPage from "../pages/admin/AdminUsersPage.jsx";
+// Admin components are lazy-loaded so they are excluded from the customer
+// bundle. The browser only downloads them when an admin actually navigates
+// to an /admin route.
+const AdminLayout = lazy(() =>
+  import("../components/admin/AdminLayout.jsx")
+);
+const AdminDashboardPage = lazy(() =>
+  import("../pages/admin/AdminDashboardPage.jsx")
+);
+const AdminProductsPage = lazy(() =>
+  import("../pages/admin/AdminProductsPage.jsx")
+);
+const AdminOrdersPage = lazy(() =>
+  import("../pages/admin/AdminOrdersPage.jsx")
+);
+const AdminUsersPage = lazy(() =>
+  import("../pages/admin/AdminUsersPage.jsx")
+);
+
+/** Minimal loading fallback shown while an admin chunk is being fetched. */
+function AdminLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-gray-500 font-medium">Loading admin panel…</p>
+      </div>
+    </div>
+  );
+}
 
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Admin routes — wrapped in dedicated AdminLayout */}
+      {/* Admin routes — lazy-loaded, wrapped in Suspense so the spinner
+          shows while the admin JS chunk downloads. */}
       <Route element={<AdminRoute />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/admin" element={<AdminDashboardPage />} />
-          <Route path="/admin/products" element={<AdminProductsPage />} />
-          <Route path="/admin/orders" element={<AdminOrdersPage />} />
-          <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route
+          element={
+            <Suspense fallback={<AdminLoadingFallback />}>
+              <AdminLayout />
+            </Suspense>
+          }
+        >
+          <Route
+            path="/admin"
+            element={
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <AdminDashboardPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <AdminProductsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <AdminOrdersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <AdminUsersPage />
+              </Suspense>
+            }
+          />
         </Route>
       </Route>
 
