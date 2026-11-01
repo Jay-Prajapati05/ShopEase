@@ -20,6 +20,14 @@ export const productApi = {
   },
 
   /**
+   * Fetch top-rated bestseller products for the Home page carousel.
+   */
+  getBestsellers: async () => {
+    const response = await api.get("/products/bestsellers");
+    return response.data; // { success, data: { products } }
+  },
+
+  /**
    * Fetch sorted list of all category names.
    */
   getCategories: async () => {

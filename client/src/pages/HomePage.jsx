@@ -14,10 +14,15 @@ import {
   Package,
   Search,
   X,
+  Percent,
+  Clock,
 } from "lucide-react";
 import { productApi } from "../api/product.api.js";
 import { useAuth } from "../hooks/useAuth.js";
 import ProductCard from "../components/features/products/ProductCard.jsx";
+import ProductCarousel from "../components/features/products/ProductCarousel.jsx";
+import ProductCardSkeleton from "../components/features/products/ProductCardSkeleton.jsx";
+import CategoryBar from "../components/layout/CategoryBar.jsx";
 
 // E-commerce Slider Banners (Amazon / Flipkart Style)
 const SLIDES = [
@@ -76,29 +81,13 @@ const POPULAR_CATEGORIES = [
   "Beauty",
 ];
 
-// Skeleton Card Loader for Home Page
-function HomeProductSkeleton() {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
-      <div className="aspect-square bg-gray-100" />
-      <div className="p-3 sm:p-4 space-y-2">
-        <div className="h-3 w-14 bg-gray-100 rounded-md" />
-        <div className="h-4 bg-gray-100 rounded w-3/4" />
-        <div className="h-3 w-1/3 bg-gray-100 rounded" />
-        <div className="flex justify-between items-center pt-2">
-          <div className="h-5 w-16 bg-gray-100 rounded" />
-          <div className="h-8 w-14 bg-gray-100 rounded-lg" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function HomePage() {
   const { isAuthenticated, user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [bestsellerProducts, setBestsellerProducts] = useState([]);
+  const [loadingBestsellers, setLoadingBestsellers] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categoriesList, setCategoriesList] = useState(POPULAR_CATEGORIES);
@@ -198,10 +187,52 @@ export default function HomePage() {
     };
   }, [selectedCategory, searchQuery]);
 
+  // Fetch top-rated bestseller products for the 4-5 sliding window carousel
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingBestsellers(true);
+
+    productApi
+      .getBestsellers()
+      .then((res) => {
+        if (isMounted) {
+          setBestsellerProducts(res.data?.products || []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setLoadingBestsellers(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Derive mega deals (items with honest MRP discount, sorted by highest % discount)
+  const megaDeals = featuredProducts
+    .filter((p) => p.originalPrice && p.originalPrice > p.price)
+    .sort(
+      (a, b) =>
+        (b.originalPrice - b.price) / b.originalPrice -
+        (a.originalPrice - a.price) / a.originalPrice
+    );
+
+  // Derive new arrivals (latest products in catalog)
+  const newArrivals = featuredProducts.slice(0, 10);
+
   const activeSlide = SLIDES[currentSlide];
 
   return (
     <div className="flex flex-col w-full max-w-full overflow-x-hidden">
+      {/* 0. Flipkart-Style Top Category Strip */}
+      <CategoryBar
+        activeCategory={selectedCategory}
+        onSelectCategory={(cat) =>
+          setSelectedCategory((prev) => (prev === cat ? "" : cat))
+        }
+      />
+
       {/* 1. Dynamic Auto-Playing Hero Banner Carousel */}
       <section
         onMouseEnter={() => setIsPaused(true)}
@@ -304,60 +335,103 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. Quick Search & Category Chips Bar */}
-      <section className="bg-white border-b border-gray-100 py-3.5 sm:py-5 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-3 sm:space-y-4">
-          {/* Prominent Live Search Input */}
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={handleSearchChange}
-              placeholder="Search products by name, brand, or category (e.g. Dell, Mi, Bluetooth)..."
-              className="w-full pl-10 pr-10 py-2.5 sm:py-3 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all shadow-inner placeholder:text-gray-400"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-200 transition"
-                aria-label="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+      {/* Active Category Filter Pill Strip (if user selected a category from CategoryBar) */}
+      {selectedCategory && (
+        <section className="bg-brand-50/70 border-b border-brand-200/70 py-2.5">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 font-medium">Viewing Category:</span>
+              <span className="text-xs font-black text-brand-950 bg-brand-300/80 px-2.5 py-0.5 rounded-full shadow-2xs">
+                {selectedCategory}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("")}
+              className="text-xs font-bold text-gray-600 hover:text-red-600 flex items-center gap-1 transition cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Show All</span>
+            </button>
           </div>
+        </section>
+      )}
 
-          {/* Category Chips Bar */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1 hidden sm:inline flex-shrink-0">
-              Categories:
-            </span>
-            {categoriesList.map((cat) => {
-              const isSelected =
-                (cat === "All Items" && !selectedCategory) ||
-                selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() =>
-                    setSelectedCategory(cat === "All Items" ? "" : cat)
-                  }
-                  className={`flex-shrink-0 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-brand-500 text-gray-950 font-black shadow-xs ring-2 ring-brand-300 scale-[1.02]"
-                      : "bg-gray-50 border border-gray-200 text-gray-700 hover:border-brand-500 hover:text-brand-800 hover:bg-brand-50 active:scale-95"
-                  }`}
+      {/* 2.5 🔥 Flipkart-Style Multi Sliding Windows & Commercial Promos */}
+      {!searchQuery && !selectedCategory && (
+        <>
+          {/* Sliding Window 1: Best Sellers */}
+          <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-8 w-full">
+            <ProductCarousel
+              title="Best Sellers & Top Rated Deals"
+              subtitle="Customer favorites with verified high ratings and honest discounts"
+              badge="⚡ TOP RATED"
+              badgeIcon={Sparkles}
+              products={bestsellerProducts}
+              loading={loadingBestsellers}
+              viewAllLink="/products?sort=rating_desc"
+            />
+          </section>
+
+          {/* Flipkart-Style Festive Promo Banner Strip */}
+          <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5 w-full">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-red-950 via-zinc-900 to-amber-950 border border-amber-500/30 p-5 sm:p-8 text-white shadow-lg">
+              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-60 h-60 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6">
+                <div className="space-y-1.5 max-w-2xl">
+                  <div className="inline-flex items-center gap-1.5 bg-brand-500 text-gray-950 font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    <Flame className="w-3.5 h-3.5 fill-gray-950" />
+                    Special Commercial Event
+                  </div>
+                  <h3 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-white">
+                    Big Value Savings — Up to 70% OFF!
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                    Exclusive discounts on top smartphones, laptops, audio & fashion. Direct delivery to your doorstep with Cash on Delivery & UPI support.
+                  </p>
+                </div>
+                <Link
+                  to="/products?sort=price_asc"
+                  className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-400 text-gray-950 font-black px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all shadow-md text-xs sm:text-sm flex-shrink-0 active:scale-95"
                 >
-                  {cat}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+                  <span>Explore All Deals</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Sliding Window 2: Mega Value Deals */}
+          {megaDeals.length > 0 && (
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 w-full">
+              <ProductCarousel
+                title="Mega Value Deals & High Discounts"
+                subtitle="Items with honest MRP price cuts across top categories"
+                badge="🏷️ MIN. 30% - 70% OFF"
+                badgeIcon={Percent}
+                products={megaDeals}
+                loading={loadingProducts}
+                viewAllLink="/products?sort=price_asc"
+              />
+            </section>
+          )}
+
+          {/* Sliding Window 3: Fresh Drops & New Arrivals */}
+          {newArrivals.length > 0 && (
+            <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 w-full">
+              <ProductCarousel
+                title="Fresh Drops & New Arrivals"
+                subtitle="Newly added items curated for the ShopEase catalog"
+                badge="✨ JUST LAUNCHED"
+                badgeIcon={Clock}
+                products={newArrivals}
+                loading={loadingProducts}
+                viewAllLink="/products?sort=newest"
+              />
+            </section>
+          )}
+        </>
+      )}
 
       {/* 3. 🔥 Trending / Featured Products Section (With Skeleton Loader) */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
@@ -401,10 +475,9 @@ export default function HomePage() {
         {/* Products Grid or Skeleton Loader */}
         {loadingProducts ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-            <HomeProductSkeleton />
-            <HomeProductSkeleton />
-            <HomeProductSkeleton />
-            <HomeProductSkeleton />
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <ProductCardSkeleton key={idx} />
+            ))}
           </div>
         ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
