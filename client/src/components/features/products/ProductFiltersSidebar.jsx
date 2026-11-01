@@ -1,29 +1,24 @@
 import { useState } from "react";
-import { Star, RotateCcw, X, SlidersHorizontal, Check } from "lucide-react";
+import { Star, RotateCcw, SlidersHorizontal, Check } from "lucide-react";
 
 /**
  * ProductFiltersSidebar
  *
- * Amazon / Flipkart style sticky desktop sidebar and mobile drawer filter controls.
- * Supports:
- * - Category selection
- * - Price presets & custom min/max inputs
- * - Customer rating threshold (4★, 3★, 2★ & above)
- * - Availability (In-stock only toggle)
- * - Reset all filters
+ * Sticky desktop sidebar and mobile drawer filter controls.
+ * Uses realistic e-commerce price tiers and category filters.
  */
 const PRICE_PRESETS = [
   { label: "All Prices", min: "", max: "" },
-  { label: "Under ₹1,000", min: "", max: "1000" },
-  { label: "₹1,000 – ₹10,000", min: "1000", max: "10000" },
-  { label: "₹10,000 – ₹50,000", min: "10000", max: "50000" },
-  { label: "Over ₹50,000", min: "50000", max: "" },
+  { label: "Under ₹5,000", min: "", max: "5000" },
+  { label: "₹5,000 – ₹20,000", min: "5000", max: "20000" },
+  { label: "₹20,000 – ₹70,000", min: "20000", max: "70000" },
+  { label: "Over ₹70,000", min: "70000", max: "" },
 ];
 
 const RATING_OPTIONS = [
-  { label: "4★ & above", value: 4 },
-  { label: "3★ & above", value: 3 },
-  { label: "2★ & above", value: 2 },
+  { label: "4★ & above", value: "4" },
+  { label: "3★ & above", value: "3" },
+  { label: "2★ & above", value: "2" },
 ];
 
 export default function ProductFiltersSidebar({
@@ -40,16 +35,20 @@ export default function ProductFiltersSidebar({
 
   const handleApplyCustomPrice = (e) => {
     e.preventDefault();
-    onFilterChange("minPrice", customMin);
-    onFilterChange("maxPrice", customMax);
+    onFilterChange({
+      minPrice: customMin || "",
+      maxPrice: customMax || "",
+    });
     if (isMobile && onCloseMobile) onCloseMobile();
   };
 
   const handlePricePreset = (preset) => {
     setCustomMin(preset.min);
     setCustomMax(preset.max);
-    onFilterChange("minPrice", preset.min);
-    onFilterChange("maxPrice", preset.max);
+    onFilterChange({
+      minPrice: preset.min,
+      maxPrice: preset.max,
+    });
     if (isMobile && onCloseMobile) onCloseMobile();
   };
 
@@ -81,7 +80,7 @@ export default function ProductFiltersSidebar({
           <button
             type="button"
             onClick={onReset}
-            className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition"
+            className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Reset All</span>
@@ -98,7 +97,7 @@ export default function ProductFiltersSidebar({
           <button
             type="button"
             onClick={() => {
-              onFilterChange("category", "");
+              onFilterChange({ category: "" });
               if (isMobile && onCloseMobile) onCloseMobile();
             }}
             className={`w-full flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg transition text-left cursor-pointer ${
@@ -121,7 +120,7 @@ export default function ProductFiltersSidebar({
                 key={cat}
                 type="button"
                 onClick={() => {
-                  onFilterChange("category", isSelected ? "" : cat);
+                  onFilterChange({ category: isSelected ? "" : cat });
                   if (isMobile && onCloseMobile) onCloseMobile();
                 }}
                 className={`w-full flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg transition text-left capitalize cursor-pointer ${
@@ -213,13 +212,13 @@ export default function ProductFiltersSidebar({
         </h4>
         <div className="space-y-1">
           {RATING_OPTIONS.map((opt) => {
-            const isSelected = Number(filters.minRating) === opt.value;
+            const isSelected = filters.minRating === opt.value;
             return (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => {
-                  onFilterChange("minRating", isSelected ? "" : String(opt.value));
+                  onFilterChange({ minRating: isSelected ? "" : opt.value });
                   if (isMobile && onCloseMobile) onCloseMobile();
                 }}
                 className={`w-full flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg transition text-left cursor-pointer ${
@@ -234,7 +233,7 @@ export default function ProductFiltersSidebar({
                       <Star
                         key={i}
                         className={`w-3.5 h-3.5 ${
-                          i < opt.value
+                          i < Number(opt.value)
                             ? "fill-amber-400 text-amber-400"
                             : "fill-gray-200 text-gray-200"
                         }`}
@@ -258,7 +257,7 @@ export default function ProductFiltersSidebar({
             type="checkbox"
             checked={Boolean(filters.inStock)}
             onChange={(e) => {
-              onFilterChange("inStock", e.target.checked);
+              onFilterChange({ inStock: e.target.checked });
               if (isMobile && onCloseMobile) onCloseMobile();
             }}
             className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 accent-brand-500 cursor-pointer"
@@ -268,4 +267,3 @@ export default function ProductFiltersSidebar({
     </aside>
   );
 }
-

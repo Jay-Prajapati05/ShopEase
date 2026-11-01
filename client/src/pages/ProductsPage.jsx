@@ -1,14 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search,
   SlidersHorizontal,
   X,
   ChevronLeft,
   ChevronRight,
   PackageSearch,
   RotateCcw,
-  Sparkles,
 } from "lucide-react";
 import { productApi } from "../api/product.api.js";
 import ProductCard from "../components/features/products/ProductCard.jsx";
@@ -27,9 +25,8 @@ const SORT_OPTIONS = [
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // URL state synchronization
-  const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
-  const [filters, setFilters] = useState({
+  // Read active filters directly from URL (Single Source of Truth)
+  const filters = useMemo(() => ({
     search: searchParams.get("search") || "",
     category: searchParams.get("category") || "",
     sort: searchParams.get("sort") || "newest",
@@ -38,7 +35,7 @@ export default function ProductsPage() {
     minRating: searchParams.get("minRating") || "",
     inStock: searchParams.get("inStock") === "true",
     page: Number(searchParams.get("page")) || 1,
-  });
+  }), [searchParams]);
 
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -47,39 +44,13 @@ export default function ProductsPage() {
   const [error, setError] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const debounceRef = useRef(null);
-
-  // Sync state if URL query parameters change (e.g. from Navbar global search or CategoryBar)
-  useEffect(() => {
-    const search = searchParams.get("search") || "";
-    const category = searchParams.get("category") || "";
-    const sort = searchParams.get("sort") || "newest";
-    const minPrice = searchParams.get("minPrice") || "";
-    const maxPrice = searchParams.get("maxPrice") || "";
-    const minRating = searchParams.get("minRating") || "";
-    const inStock = searchParams.get("inStock") === "true";
-    const page = Number(searchParams.get("page")) || 1;
-
-    setSearchInput(search);
-    setFilters({
-      search,
-      category,
-      sort,
-      minPrice,
-      maxPrice,
-      minRating,
-      inStock,
-      page,
-    });
-  }, [searchParams]);
-
-  // Fetch distinct category catalog
+  // Fetch distinct category catalog once
   useEffect(() => {
     let isMounted = true;
     productApi
       .getCategories()
       .then((data) => {
-        if (isMounted) setCategories(data.data.categories || []);
+        if (isMounted) setCategories(data.data?.categories || []);
       })
       .catch(() => {});
 
@@ -88,134 +59,116 @@ export default function ProductsPage() {
     };
   }, []);
 
-  // Fetch products query
-  const fetchProducts = useCallback(async (activeFilters) => {
+  // Fetch products query whenever URL search params change
+  useEffect(() => {
+    let isMounted = true;
     setLoading(true);
     setError("");
-    try {
-      const params = {
-        page: activeFilters.page,
-        limit: 12,
-        sort: activeFilters.sort,
-      };
-      if (activeFilters.search) params.search = activeFilters.search;
-      if (activeFilters.category) params.category = activeFilters.category;
-      if (activeFilters.minPrice) params.minPrice = activeFilters.minPrice;
-      if (activeFilters.maxPrice) params.maxPrice = activeFilters.maxPrice;
-      if (activeFilters.minRating) params.minRating = activeFilters.minRating;
-      if (activeFilters.inStock) params.inStock = "true";
 
-      const data = await productApi.getProducts(params);
-      setProducts(data.data.products || []);
-      setPagination(data.data.pagination || null);
-    } catch (err) {
-      setError("Unable to load products. Please check your connection.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Sync filters to URL & trigger fetch
-  useEffect(() => {
-    const params = {};
+    const params = {
+      page: filters.page,
+      limit: 12,
+      sort: filters.sort,
+    };
     if (filters.search) params.search = filters.search;
     if (filters.category) params.category = filters.category;
-    if (filters.sort && filters.sort !== "newest") params.sort = filters.sort;
     if (filters.minPrice) params.minPrice = filters.minPrice;
     if (filters.maxPrice) params.maxPrice = filters.maxPrice;
     if (filters.minRating) params.minRating = filters.minRating;
     if (filters.inStock) params.inStock = "true";
-    if (filters.page > 1) params.page = String(filters.page);
 
-    setSearchParams(params, { replace: true });
-    fetchProducts(filters);
-  }, [filters, fetchProducts, setSearchParams]);
+    productApi
+      .getProducts(params)
+      .then((res) => {
+        if (isMounted) {
+          setProducts(res.data?.products || []);
+          setPagination(res.data?.pagination || null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setError("Unable to load products. Please check your connection.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
-  // Handle live search input change (500ms debounce)
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchInput(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: value.trim(), page: 1 }));
-    }, 500);
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [filters]);
 
-  const handleClearSearch = () => {
-    setSearchInput("");
-    setFilters((prev) => ({ ...prev, search: "", page: 1 }));
-  };
+  // Update filters in URL
+  const updateFilters = useCallback((updates) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v === "" || v === null || v === undefined || v === false) {
+          next.delete(k);
+        } else {
+          next.set(k, String(v));
+        }
+      });
+      // Reset page to 1 whenever a filter changes (unless page itself is being set)
+      if (!("page" in updates)) {
+        next.delete("page");
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
-  };
-
-  const handleResetFilters = () => {
-    setSearchInput("");
-    setFilters({
-      search: "",
-      category: "",
-      sort: "newest",
-      minPrice: "",
-      maxPrice: "",
-      minRating: "",
-      inStock: false,
-      page: 1,
-    });
-  };
+  const handleResetFilters = useCallback(() => {
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
 
   const handlePageChange = (newPage) => {
-    setFilters((prev) => ({ ...prev, page: newPage }));
+    updateFilters({ page: newPage });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Active filter count for badge
-  const activeFiltersList = [];
-  if (filters.category) {
-    activeFiltersList.push({
-      key: "category",
-      label: `Category: ${filters.category}`,
-    });
-  }
-  if (filters.minPrice || filters.maxPrice) {
-    const min = filters.minPrice ? `₹${filters.minPrice}` : "₹0";
-    const max = filters.maxPrice ? `₹${filters.maxPrice}` : "Any";
-    activeFiltersList.push({
-      key: "price",
-      label: `Price: ${min} – ${max}`,
-    });
-  }
-  if (filters.minRating) {
-    activeFiltersList.push({
-      key: "minRating",
-      label: `Rating: ${filters.minRating}★ & above`,
-    });
-  }
-  if (filters.inStock) {
-    activeFiltersList.push({
-      key: "inStock",
-      label: "In Stock Only",
-    });
-  }
-  if (filters.search) {
-    activeFiltersList.push({
-      key: "search",
-      label: `Search: "${filters.search}"`,
-    });
-  }
-
-  const handleRemoveChip = (key) => {
-    if (key === "price") {
-      setFilters((prev) => ({ ...prev, minPrice: "", maxPrice: "", page: 1 }));
-    } else if (key === "search") {
-      setSearchInput("");
-      setFilters((prev) => ({ ...prev, search: "", page: 1 }));
-    } else if (key === "inStock") {
-      setFilters((prev) => ({ ...prev, inStock: false, page: 1 }));
-    } else {
-      setFilters((prev) => ({ ...prev, [key]: "", page: 1 }));
+  // Active filter count and chips list
+  const activeFiltersList = useMemo(() => {
+    const list = [];
+    if (filters.category) {
+      list.push({
+        key: "category",
+        label: `Category: ${filters.category}`,
+        onRemove: () => updateFilters({ category: "" }),
+      });
     }
-  };
+    if (filters.minPrice || filters.maxPrice) {
+      const min = filters.minPrice ? `₹${Number(filters.minPrice).toLocaleString("en-IN")}` : "₹0";
+      const max = filters.maxPrice ? `₹${Number(filters.maxPrice).toLocaleString("en-IN")}` : "Any";
+      list.push({
+        key: "price",
+        label: `Price: ${min} – ${max}`,
+        onRemove: () => updateFilters({ minPrice: "", maxPrice: "" }),
+      });
+    }
+    if (filters.minRating) {
+      list.push({
+        key: "minRating",
+        label: `Rating: ${filters.minRating}★ & above`,
+        onRemove: () => updateFilters({ minRating: "" }),
+      });
+    }
+    if (filters.inStock) {
+      list.push({
+        key: "inStock",
+        label: "In Stock Only",
+        onRemove: () => updateFilters({ inStock: false }),
+      });
+    }
+    if (filters.search) {
+      list.push({
+        key: "search",
+        label: `Search: "${filters.search}"`,
+        onRemove: () => updateFilters({ search: "" }),
+      });
+    }
+    return list;
+  }, [filters, updateFilters]);
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 w-full max-w-full">
@@ -243,7 +196,7 @@ export default function ProductsPage() {
           <button
             type="button"
             onClick={() => setShowMobileFilters(true)}
-            className="md:hidden inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-2xs hover:bg-gray-50 active:scale-95"
+            className="md:hidden inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-2xs hover:bg-gray-50 active:scale-95 cursor-pointer"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-brand-600" />
             <span>Filters</span>
@@ -261,7 +214,7 @@ export default function ProductsPage() {
             </span>
             <select
               value={filters.sort}
-              onChange={(e) => handleFilterChange("sort", e.target.value)}
+              onChange={(e) => updateFilters({ sort: e.target.value })}
               aria-label="Sort products"
               className="text-xs sm:text-sm font-semibold bg-white border border-gray-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs cursor-pointer w-full sm:w-auto"
             >
@@ -283,7 +236,7 @@ export default function ProductsPage() {
             <button
               key={chip.key}
               type="button"
-              onClick={() => handleRemoveChip(chip.key)}
+              onClick={chip.onRemove}
               className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-800 px-2.5 py-1 rounded-lg hover:border-red-300 hover:text-red-700 shadow-2xs group transition cursor-pointer"
             >
               <span>{chip.label}</span>
@@ -308,7 +261,7 @@ export default function ProductsPage() {
           <ProductFiltersSidebar
             categories={categories}
             filters={filters}
-            onFilterChange={handleFilterChange}
+            onFilterChange={updateFilters}
             onReset={handleResetFilters}
             activeCount={activeFiltersList.length}
           />
@@ -411,7 +364,7 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setShowMobileFilters(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -421,7 +374,7 @@ export default function ProductsPage() {
               <ProductFiltersSidebar
                 categories={categories}
                 filters={filters}
-                onFilterChange={handleFilterChange}
+                onFilterChange={updateFilters}
                 onReset={handleResetFilters}
                 activeCount={activeFiltersList.length}
                 isMobile={true}
@@ -433,7 +386,7 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setShowMobileFilters(false)}
-                className="w-full py-2.5 text-xs font-black bg-brand-500 text-gray-950 rounded-xl shadow-xs"
+                className="w-full py-2.5 text-xs font-black bg-brand-500 text-gray-950 rounded-xl shadow-xs cursor-pointer"
               >
                 Apply & View Products
               </button>
