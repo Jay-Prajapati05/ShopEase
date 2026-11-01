@@ -86,6 +86,11 @@ export const getProducts = async (query = {}) => {
 
   if (query.inStock === "true") filter.countInStock = { $gt: 0 };
 
+  const minRating = Number(query.minRating);
+  if (Number.isFinite(minRating) && minRating > 0 && minRating <= 5) {
+    filter.rating = { $gte: minRating };
+  }
+
   const sortKey = asString(query.sort);
   const sort = Object.hasOwn(SORT_OPTIONS, sortKey)
     ? SORT_OPTIONS[sortKey]
