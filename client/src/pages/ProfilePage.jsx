@@ -1,7 +1,22 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  User,
+  MapPin,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Lock,
+  Phone,
+  Home,
+  Save,
+  Clock,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth.js";
 import authApi from "../api/auth.api.js";
+import AccountNav from "../components/features/account/AccountNav.jsx";
 
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 
@@ -16,15 +31,17 @@ const emptyAddress = {
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "profile";
 
-  // Profile fields state
+  // 1. Profile fields state
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState("");
   const [profileError, setProfileError] = useState("");
 
-  // Password fields state
+  // 2. Password fields state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,7 +49,7 @@ export default function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
-  // Saved address state
+  // 3. Saved address state
   const [addressForm, setAddressForm] = useState(emptyAddress);
   const [addressLoading, setAddressLoading] = useState(true);
   const [addressSaving, setAddressSaving] = useState(false);
@@ -49,19 +66,24 @@ export default function ProfilePage() {
 
   // Fetch saved address on mount
   useEffect(() => {
-    const fetchAddress = async () => {
-      try {
-        setAddressLoading(true);
-        const res = await authApi.getSavedAddress();
+    let isMounted = true;
+    authApi
+      .getSavedAddress()
+      .then((res) => {
+        if (!isMounted) return;
         const addr = res?.data?.address;
         if (addr) setAddressForm({ ...emptyAddress, ...addr });
-      } catch {
-        // silent — user may not have an address yet
-      } finally {
-        setAddressLoading(false);
-      }
+      })
+      .catch(() => {
+        // silent fallback if user does not have an address yet
+      })
+      .finally(() => {
+        if (isMounted) setAddressLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
     };
-    fetchAddress();
   }, []);
 
   const handleAddressChange = (e) => {
@@ -86,10 +108,10 @@ export default function ProfilePage() {
     if (!addressForm.phone.trim()) {
       errs.phone = "Phone number is required";
     } else if (!PHONE_REGEX.test(addressForm.phone.trim())) {
-      errs.phone = "Valid 10-digit Indian mobile (starts 6–9)";
+      errs.phone = "Valid 10-digit Indian mobile (starts with 6–9)";
     }
     if (addressForm.altPhone.trim() && !PHONE_REGEX.test(addressForm.altPhone.trim())) {
-      errs.altPhone = "Valid 10-digit Indian mobile (starts 6–9)";
+      errs.altPhone = "Valid 10-digit Indian mobile (starts with 6–9)";
     }
     setAddressFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -100,6 +122,7 @@ export default function ProfilePage() {
     setAddressError("");
     setAddressSuccess("");
     if (!validateAddress()) return;
+
     try {
       setAddressSaving(true);
       await authApi.updateSavedAddress(addressForm);
@@ -123,7 +146,7 @@ export default function ProfilePage() {
     setProfileSuccess("");
 
     if (!name.trim()) {
-      setProfileError("Name cannot be empty");
+      setProfileError("Full Name cannot be empty");
       return;
     }
     if (!email.trim()) {
@@ -134,7 +157,7 @@ export default function ProfilePage() {
     try {
       setProfileLoading(true);
       await updateProfile({ name: name.trim(), email: email.trim() });
-      setProfileSuccess("Profile details updated successfully!");
+      setProfileSuccess("Personal details updated successfully!");
       setTimeout(() => setProfileSuccess(""), 4000);
     } catch (err) {
       const msg =
@@ -185,455 +208,460 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-            My Account & Profile
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage your personal profile details, account preferences and security.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            to="/my-orders"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-              />
-            </svg>
-            My Orders
-          </Link>
-          {user?.role === "admin" && (
-            <Link
-              to="/admin"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border border-slate-300"
-            >
-              Admin Dashboard
-            </Link>
-          )}
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+      {/* Unified Account Hub Navigation Header */}
+      <AccountNav activeTab={activeTab} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Profile Card */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm text-center">
-            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center text-3xl font-bold shadow-md shadow-amber-500/20 mb-4">
-              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-            </div>
-            <h2 className="text-lg font-bold text-slate-900">{user?.name}</h2>
-            <p className="text-sm text-slate-500 truncate">{user?.email}</p>
+      {/* Main Tab Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+        {/* Left Column: Account Summary Snapshot */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
+            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-4 pb-3 border-b border-gray-100 flex items-center gap-2">
+              <User className="w-4 h-4 text-brand-600" />
+              Account Snapshot
+            </h3>
 
-            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2 text-left text-xs text-slate-600">
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-400">Account Role</span>
-                <span className="capitalize font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+            <div className="space-y-3.5 text-xs text-gray-600">
+              <div className="flex items-center justify-between py-1 border-b border-gray-50">
+                <span className="font-medium text-gray-500">Account Type</span>
+                <span className="font-bold text-gray-900 capitalize bg-gray-100 px-2.5 py-0.5 rounded-lg">
                   {user?.role || "Customer"}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-400">Joined</span>
-                <span className="font-medium text-slate-700">
-                  {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString("en-IN", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "Recently"}
+
+              <div className="flex items-center justify-between py-1 border-b border-gray-50">
+                <span className="font-medium text-gray-500">Email Status</span>
+                <span className="font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-lg flex items-center gap-1 border border-green-200">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Verified
                 </span>
               </div>
+
+              <div className="flex items-center justify-between py-1 border-b border-gray-50">
+                <span className="font-medium text-gray-500">Member Since</span>
+                <span className="font-bold text-gray-900">
+                  {user?.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString("en-IN", {
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "Recent"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1">
+                <span className="font-medium text-gray-500">Fast Deliveries</span>
+                <span className="font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200">
+                  Eligible (₹500+)
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Action Button to Orders */}
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <Link
+                to="/my-orders"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 transition shadow-2xs cursor-pointer"
+              >
+                <span>View Recent Orders</span>
+                <span className="text-gray-400">→</span>
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Forms */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Personal Info Form */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">
-              Personal Information
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">
-              Update your display name and email address.
-            </p>
-
-            {profileSuccess && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-emerald-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                {profileSuccess}
-              </div>
-            )}
-
-            {profileError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-lg flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-rose-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {profileError}
-              </div>
-            )}
-
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  maxLength={50}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                  placeholder="Enter your name"
-                />
+        {/* Right Column: Dynamic Tab Body */}
+        <div className="lg:col-span-8">
+          {/* TAB 1: PERSONAL INFORMATION */}
+          {activeTab === "profile" && (
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-2xs">
+              <div className="mb-6 pb-4 border-b border-gray-100">
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
+                  Personal Information
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                  Manage your display name and registered email address.
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                  placeholder="Enter your email"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={profileLoading}
-                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-60 flex items-center gap-2"
-                >
-                  {profileLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* ── Saved Delivery Address Form ── */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">
-              Saved Delivery Address
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">
-              Your delivery address is auto-filled at checkout. Phone number is required for delivery contact.
-            </p>
-
-            {addressSuccess && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg flex items-center gap-2">
-                <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                {addressSuccess}
-              </div>
-            )}
-            {addressError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-lg">
-                {addressError}
-              </div>
-            )}
-
-            {addressLoading ? (
-              <div className="space-y-3 animate-pulse">
-                <div className="h-10 bg-slate-100 rounded-lg" />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="h-10 bg-slate-100 rounded-lg" />
-                  <div className="h-10 bg-slate-100 rounded-lg" />
+              {profileSuccess && (
+                <div className="mb-5 p-3.5 bg-green-50 border border-green-200 text-green-800 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                  <span>{profileSuccess}</span>
                 </div>
-                <div className="h-10 bg-slate-100 rounded-lg" />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="h-10 bg-slate-100 rounded-lg" />
-                  <div className="h-10 bg-slate-100 rounded-lg" />
+              )}
+
+              {profileError && (
+                <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{profileError}</span>
                 </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSaveAddress} className="space-y-4" noValidate>
-                {/* Street Address */}
+              )}
+
+              <form onSubmit={handleUpdateProfile} className="space-y-4 sm:space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Street Address / Flat / Area *
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Full Name
                   </label>
                   <input
-                    name="address"
                     type="text"
-                    placeholder="e.g. 123 MG Road, 2nd Floor"
-                    value={addressForm.address}
-                    onChange={handleAddressChange}
-                    disabled={addressSaving}
-                    className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                      addressFieldErrors.address ? "border-red-300 bg-red-50" : "border-slate-300"
-                    }`}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    maxLength={50}
+                    placeholder="Enter your full name"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white focus:border-brand-500 transition shadow-2xs"
                   />
-                  {addressFieldErrors.address && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.address}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* City */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">City *</label>
-                    <input
-                      name="city"
-                      type="text"
-                      placeholder="e.g. Bangalore"
-                      value={addressForm.city}
-                      onChange={handleAddressChange}
-                      disabled={addressSaving}
-                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                        addressFieldErrors.city ? "border-red-300 bg-red-50" : "border-slate-300"
-                      }`}
-                    />
-                    {addressFieldErrors.city && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.city}</p>}
-                  </div>
-
-                  {/* Postal Code */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Postal Code / PIN *</label>
-                    <input
-                      name="postalCode"
-                      type="text"
-                      placeholder="e.g. 560001"
-                      value={addressForm.postalCode}
-                      onChange={handleAddressChange}
-                      disabled={addressSaving}
-                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                        addressFieldErrors.postalCode ? "border-red-300 bg-red-50" : "border-slate-300"
-                      }`}
-                    />
-                    {addressFieldErrors.postalCode && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.postalCode}</p>}
-                  </div>
-                </div>
-
-                {/* Country */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Country *</label>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Email Address
+                  </label>
                   <input
-                    name="country"
-                    type="text"
-                    value={addressForm.country}
-                    onChange={handleAddressChange}
-                    disabled={addressSaving}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="Enter your email address"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white focus:border-brand-500 transition shadow-2xs"
                   />
-                  {addressFieldErrors.country && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.country}</p>}
-                </div>
-
-                {/* Phone Numbers */}
-                <div className="pt-2 border-t border-slate-100">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">📞 Contact for Delivery</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Phone Number *</label>
-                      <input
-                        name="phone"
-                        type="tel"
-                        placeholder="e.g. 9876543210"
-                        maxLength={10}
-                        value={addressForm.phone}
-                        onChange={handleAddressChange}
-                        disabled={addressSaving}
-                        className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                          addressFieldErrors.phone ? "border-red-300 bg-red-50" : "border-slate-300"
-                        }`}
-                      />
-                      {addressFieldErrors.phone && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.phone}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Alternate Phone{" "}
-                        <span className="text-slate-400 font-normal normal-case">(optional)</span>
-                      </label>
-                      <input
-                        name="altPhone"
-                        type="tel"
-                        placeholder="e.g. 9123456789"
-                        maxLength={10}
-                        value={addressForm.altPhone}
-                        onChange={handleAddressChange}
-                        disabled={addressSaving}
-                        className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                          addressFieldErrors.altPhone ? "border-red-300 bg-red-50" : "border-slate-300"
-                        }`}
-                      />
-                      {addressFieldErrors.altPhone && <p className="text-xs text-red-600 mt-1">{addressFieldErrors.altPhone}</p>}
-                    </div>
-                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Used for order receipts and password reset emails.
+                  </p>
                 </div>
 
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={addressSaving}
-                    className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-60 flex items-center gap-2"
+                    disabled={profileLoading}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 active:scale-95 text-gray-950 text-xs sm:text-sm font-black rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
                   >
-                    {addressSaving ? (
-                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</>
+                    {profileLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving Changes...</span>
+                      </>
                     ) : (
-                      "Save Address"
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Save Changes</span>
+                      </>
                     )}
                   </button>
                 </div>
               </form>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Password Security Form */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">
-              Change Password
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">
-              Ensure your account is using a secure and unique password.
-            </p>
-
-            {passwordSuccess && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-emerald-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                {passwordSuccess}
-              </div>
-            )}
-
-            {passwordError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-lg flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-rose-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {passwordError}
-              </div>
-            )}
-
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Current Password
-                </label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* TAB 2: SAVED DELIVERY ADDRESS */}
+          {activeTab === "address" && (
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-2xs">
+              <div className="mb-6 pb-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    New Password
+                  <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-brand-600" />
+                    Saved Delivery Address
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                    Auto-filled at checkout for express ordering.
+                  </p>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">
+                  <Home className="w-3 h-3 text-green-600" />
+                  Default Address
+                </span>
+              </div>
+
+              {addressSuccess && (
+                <div className="mb-5 p-3.5 bg-green-50 border border-green-200 text-green-800 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                  <span>{addressSuccess}</span>
+                </div>
+              )}
+
+              {addressError && (
+                <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{addressError}</span>
+                </div>
+              )}
+
+              {addressLoading ? (
+                <div className="space-y-4 animate-pulse py-4">
+                  <div className="h-10 bg-gray-100 rounded-xl" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-10 bg-gray-100 rounded-xl" />
+                    <div className="h-10 bg-gray-100 rounded-xl" />
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSaveAddress} className="space-y-4 sm:space-y-5" noValidate>
+                  {/* Street Address */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      Flat / House No. / Street Address
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={addressForm.address}
+                      onChange={handleAddressChange}
+                      placeholder="e.g. 102, Shivalik Residency, 150 Feet Ring Road"
+                      className={`w-full px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none transition shadow-2xs ${
+                        addressFieldErrors.address
+                          ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+                          : "border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                      }`}
+                    />
+                    {addressFieldErrors.address && (
+                      <p className="text-[11px] text-red-600 mt-1 font-semibold">
+                        {addressFieldErrors.address}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* City & PIN Code */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                        City / District
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={addressForm.city}
+                        onChange={handleAddressChange}
+                        placeholder="e.g. Rajkot, Mumbai"
+                        className={`w-full px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none transition shadow-2xs ${
+                          addressFieldErrors.city
+                            ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+                            : "border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                        }`}
+                      />
+                      {addressFieldErrors.city && (
+                        <p className="text-[11px] text-red-600 mt-1 font-semibold">
+                          {addressFieldErrors.city}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                        PIN Code (Postal Code)
+                      </label>
+                      <input
+                        type="text"
+                        name="postalCode"
+                        value={addressForm.postalCode}
+                        onChange={handleAddressChange}
+                        placeholder="e.g. 360005"
+                        maxLength={10}
+                        className={`w-full px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none transition shadow-2xs ${
+                          addressFieldErrors.postalCode
+                            ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+                            : "border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                        }`}
+                      />
+                      {addressFieldErrors.postalCode && (
+                        <p className="text-[11px] text-red-600 mt-1 font-semibold">
+                          {addressFieldErrors.postalCode}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Phone & Alternate Phone */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                        <span>Contact Mobile Number</span>
+                        <span className="text-[10px] text-brand-600 font-bold">10-Digit (starts 6–9)</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={addressForm.phone}
+                          onChange={handleAddressChange}
+                          placeholder="9876543210"
+                          maxLength={10}
+                          className={`w-full pl-12 pr-4 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none transition shadow-2xs ${
+                            addressFieldErrors.phone
+                              ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+                              : "border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                          }`}
+                        />
+                      </div>
+                      {addressFieldErrors.phone && (
+                        <p className="text-[11px] text-red-600 mt-1 font-semibold">
+                          {addressFieldErrors.phone}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                        <span>Alternate Mobile</span>
+                        <span className="text-[10px] text-gray-400">Optional</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          name="altPhone"
+                          value={addressForm.altPhone}
+                          onChange={handleAddressChange}
+                          placeholder="9876543211"
+                          maxLength={10}
+                          className={`w-full pl-12 pr-4 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none transition shadow-2xs ${
+                            addressFieldErrors.altPhone
+                              ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+                              : "border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                          }`}
+                        />
+                      </div>
+                      {addressFieldErrors.altPhone && (
+                        <p className="text-[11px] text-red-600 mt-1 font-semibold">
+                          {addressFieldErrors.altPhone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={addressSaving}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 active:scale-95 text-gray-950 text-xs sm:text-sm font-black rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      {addressSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Saving Address...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          <span>Save Delivery Address</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: SECURITY & PASSWORD */}
+          {activeTab === "security" && (
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-2xs">
+              <div className="mb-6 pb-4 border-b border-gray-100">
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-brand-600" />
+                  Security & Password
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                  Keep your account secure with regular password updates.
+                </p>
+              </div>
+
+              {passwordSuccess && (
+                <div className="mb-5 p-3.5 bg-green-50 border border-green-200 text-green-800 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                  <span>{passwordSuccess}</span>
+                </div>
+              )}
+
+              {passwordError && (
+                <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdatePassword} className="space-y-4 sm:space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Current Password
                   </label>
                   <input
                     type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    minLength={8}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                    placeholder="Min 8 characters"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    placeholder="Enter current password"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition shadow-2xs"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    minLength={8}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                    placeholder="Repeat new password"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      placeholder="At least 8 characters"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition shadow-2xs"
+                    />
+                  </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-60 flex items-center gap-2"
-                >
-                  {passwordLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Password"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      placeholder="Re-type new password"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                  <Lock className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    <strong>Security Recommendation:</strong> Always choose a unique password of at least 8 characters with numbers and symbols. Never share your OTP or password.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-black active:scale-95 text-white text-xs sm:text-sm font-black rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    {passwordLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Updating Password...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Update Password</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>
