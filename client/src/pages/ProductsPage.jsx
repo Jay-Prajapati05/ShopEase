@@ -350,27 +350,52 @@ export default function ProductsPage() {
 
       {/* 5. Mobile Slide-Over Filter Drawer */}
       {showMobileFilters && (
-        <div className="fixed inset-0 z-50 md:hidden flex justify-end">
+        <div className="fixed inset-0 z-[60] md:hidden flex justify-end">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setShowMobileFilters(false)}
           />
 
-          {/* Slide-over Content */}
-          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-900">Filters</h3>
-              <button
-                type="button"
-                onClick={() => setShowMobileFilters(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          {/* Slide-over Drawer (Flipkart-style 2-Column Sheet) */}
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200">
+            {/* Sticky Header */}
+            <div className="px-4 py-3.5 border-b border-gray-200 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-brand-600" />
+                <h3 className="text-base font-black text-gray-900 tracking-tight">
+                  Filters
+                </h3>
+                {activeFiltersList.length > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-brand-500 text-gray-950 font-black text-xs flex items-center justify-center">
+                    {activeFiltersList.length}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeFiltersList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="text-xs font-bold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                  >
+                    Reset All
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                  aria-label="Close filters"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            {/* 2-Column Body */}
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
               <ProductFiltersSidebar
                 categories={categories}
                 filters={filters}
@@ -382,13 +407,26 @@ export default function ProductsPage() {
               />
             </div>
 
-            <div className="p-4 border-t border-gray-100 bg-gray-50">
+            {/* Sticky Bottom Action Bar */}
+            <div className="p-3.5 border-t border-gray-200 bg-white shadow-lg shrink-0 flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowMobileFilters(false)}
-                className="w-full py-2.5 text-xs font-black bg-brand-500 text-gray-950 rounded-xl shadow-xs cursor-pointer"
+                className="w-1/3 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer text-center"
               >
-                Apply & View Products
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="flex-1 py-2.5 text-xs font-black bg-brand-500 hover:bg-brand-400 text-gray-950 rounded-xl shadow-xs transition active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>Apply Filters</span>
+                {pagination && !loading && (
+                  <span className="text-[11px] font-semibold opacity-85">
+                    ({pagination.total})
+                  </span>
+                )}
               </button>
             </div>
           </div>
