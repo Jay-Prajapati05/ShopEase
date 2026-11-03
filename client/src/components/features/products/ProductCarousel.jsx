@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import ProductCard from "./ProductCard.jsx";
 import ProductCardSkeleton from "./ProductCardSkeleton.jsx";
 
@@ -10,8 +10,8 @@ import ProductCardSkeleton from "./ProductCardSkeleton.jsx";
  * Amazon / Flipkart style 4-5 product sliding window carousel.
  * Features:
  * - 4-5 items visible on desktop / wide screens, 2-3 on tablet/mobile.
- * - Smooth horizontal scroll with touch swipe and hardware-accelerated inertia.
- * - Left/Right navigation buttons with boundary detection (auto disable at start/end).
+ * - Smooth horizontal scroll with touch swipe and trackpad scroll.
+ * - Direct "View All" catalog link.
  * - Shimmer skeleton state matching exact card geometry.
  */
 export default function ProductCarousel({
@@ -24,40 +24,6 @@ export default function ProductCarousel({
   viewAllLink = "/products",
 }) {
   const scrollRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScrollBounds = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 4);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
-  };
-
-  useEffect(() => {
-    checkScrollBounds();
-    const el = scrollRef.current;
-    if (!el) return;
-
-    el.addEventListener("scroll", checkScrollBounds, { passive: true });
-    window.addEventListener("resize", checkScrollBounds);
-
-    return () => {
-      el.removeEventListener("scroll", checkScrollBounds);
-      window.removeEventListener("resize", checkScrollBounds);
-    };
-  }, [products, loading]);
-
-  const handleScroll = (direction) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const scrollDistance = el.clientWidth * 0.75;
-    el.scrollBy({
-      left: direction === "left" ? -scrollDistance : scrollDistance,
-      behavior: "smooth",
-    });
-  };
 
   if (!loading && (!products || products.length === 0)) {
     return null;
@@ -82,47 +48,16 @@ export default function ProductCarousel({
           )}
         </div>
 
-        {/* Controls: Navigation Arrows + View All */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {viewAllLink && (
-            <Link
-              to={viewAllLink}
-              className="text-xs sm:text-sm font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1 hover:underline mr-1 sm:mr-2"
-            >
-              <span>View All</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          )}
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleScroll("left")}
-              disabled={!canScrollLeft}
-              aria-label="Slide previous products"
-              className={`p-2 rounded-xl border transition-all duration-200 flex items-center justify-center ${
-                canScrollLeft
-                  ? "bg-white border-gray-200 text-gray-800 hover:bg-brand-50 hover:border-brand-300 hover:text-brand-900 shadow-2xs active:scale-95 cursor-pointer"
-                  : "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed opacity-50"
-              }`}
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleScroll("right")}
-              disabled={!canScrollRight}
-              aria-label="Slide next products"
-              className={`p-2 rounded-xl border transition-all duration-200 flex items-center justify-center ${
-                canScrollRight
-                  ? "bg-white border-gray-200 text-gray-800 hover:bg-brand-50 hover:border-brand-300 hover:text-brand-900 shadow-2xs active:scale-95 cursor-pointer"
-                  : "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed opacity-50"
-              }`}
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
-            </button>
-          </div>
-        </div>
+        {/* View All Action */}
+        {viewAllLink && (
+          <Link
+            to={viewAllLink}
+            className="text-xs sm:text-sm font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1 hover:underline flex-shrink-0"
+          >
+            <span>View All</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
       </div>
 
       {/* 4-5 Sliding Window Container */}
@@ -152,4 +87,3 @@ export default function ProductCarousel({
     </section>
   );
 }
-

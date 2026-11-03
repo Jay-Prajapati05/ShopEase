@@ -338,7 +338,7 @@ export default function HomePage() {
       {/* Active Category Filter Pill Strip (if user selected a category from CategoryBar) */}
       {selectedCategory && (
         <section className="bg-brand-50/70 border-b border-brand-200/70 py-2.5">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-600 font-medium">Viewing Category:</span>
               <span className="text-xs font-black text-brand-950 bg-brand-300/80 px-2.5 py-0.5 rounded-full shadow-2xs">
@@ -361,7 +361,7 @@ export default function HomePage() {
       {!searchQuery && !selectedCategory && (
         <>
           {/* Sliding Window 1: Best Sellers */}
-          <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-8 w-full">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 w-full">
             <ProductCarousel
               title="Best Sellers & Top Rated Deals"
               subtitle="Customer favorites with verified high ratings and honest discounts"
@@ -374,7 +374,7 @@ export default function HomePage() {
           </section>
 
           {/* Flipkart-Style Festive Promo Banner Strip */}
-          <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5 w-full">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 w-full">
             <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-red-950 via-zinc-900 to-amber-950 border border-amber-500/30 p-5 sm:p-8 text-white shadow-lg">
               <div className="absolute top-0 right-0 -mt-10 -mr-10 w-60 h-60 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6">
@@ -403,7 +403,7 @@ export default function HomePage() {
 
           {/* Sliding Window 2: Mega Value Deals */}
           {megaDeals.length > 0 && (
-            <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 w-full">
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 w-full">
               <ProductCarousel
                 title="Mega Value Deals & High Discounts"
                 subtitle="Items with honest MRP price cuts across top categories"
@@ -418,7 +418,7 @@ export default function HomePage() {
 
           {/* Sliding Window 3: Fresh Drops & New Arrivals */}
           {newArrivals.length > 0 && (
-            <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 w-full">
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 w-full">
               <ProductCarousel
                 title="Fresh Drops & New Arrivals"
                 subtitle="Newly added items curated for the ShopEase catalog"
@@ -434,7 +434,7 @@ export default function HomePage() {
       )}
 
       {/* 3. 🔥 Trending / Featured Products Section (With Skeleton Loader) */}
-      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
         <div className="flex items-end justify-between mb-5 sm:mb-6">
           <div>
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-md border border-brand-200/80 w-fit mb-1.5">

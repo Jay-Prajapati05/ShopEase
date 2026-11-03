@@ -89,9 +89,9 @@ export default function CategoryBar({ activeCategory = "", onSelectCategory }) {
 
   return (
     <div className="w-full bg-white border-b border-gray-100 shadow-2xs">
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
-          className="flex items-center justify-between sm:justify-start gap-4 sm:gap-8 overflow-x-auto no-scrollbar py-3 px-1"
+          className="flex items-center justify-start sm:justify-center gap-6 sm:gap-8 overflow-x-auto no-scrollbar py-3 px-1"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {CATEGORIES.map((item) => {
