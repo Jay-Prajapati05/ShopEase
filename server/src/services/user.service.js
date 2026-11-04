@@ -11,9 +11,17 @@ import { USER_ROLES } from "../constants.js";
  */
 
 /**
- * Get paginated list of all registered users (excluding sensitive hashes).
+ * Helper to escape special characters for safe regular expression queries.
+ * Prevents ReDoS and regex injection attacks.
+ */
+const escapeRegex = (string) =>
+  string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Get paginated list of registered users (excluding sensitive hashes).
+ * Supports safe search on name/email, role filtering, and bounded pagination.
  *
- * @param {Object} query - { page, limit }
+ * @param {Object} query - { page, limit, search, role }
  * @returns {Promise<{ users: Array, pagination: Object }>}
  */
 export const getAllUsers = async (query = {}) => {
@@ -21,14 +29,40 @@ export const getAllUsers = async (query = {}) => {
   const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 10), 50);
   const skip = (page - 1) * limit;
 
+  const filter = {};
+
+  // 1. Safe regex search across name and email
+  if (typeof query.search === "string" && query.search.trim()) {
+    const escaped = escapeRegex(query.search.trim());
+    filter.$or = [
+      { name: { $regex: escaped, $options: "i" } },
+      { email: { $regex: escaped, $options: "i" } },
+    ];
+  }
+
+  // 2. Role whitelist filter
+  if (query.role !== undefined && query.role !== null && query.role !== "") {
+    if (typeof query.role !== "string") {
+      throw ApiError.badRequest("Role filter must be a string");
+    }
+    const roleLower = query.role.trim().toLowerCase();
+    const validRoles = Object.values(USER_ROLES);
+    if (!validRoles.includes(roleLower)) {
+      throw ApiError.badRequest(
+        `Invalid role filter. Allowed values: ${validRoles.join(", ")}`
+      );
+    }
+    filter.role = roleLower;
+  }
+
   const [users, total] = await Promise.all([
-    User.find()
+    User.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .select("-password -refreshTokenHash -passwordResetTokenHash -passwordResetExpires -__v")
       .lean(),
-    User.countDocuments(),
+    User.countDocuments(filter),
   ]);
 
   return {

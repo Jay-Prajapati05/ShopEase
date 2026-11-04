@@ -320,22 +320,50 @@ export const getOrderById = async (orderId, callerId, callerRole) => {
 
 /**
  * Return all orders with user info, newest first. Admin-only.
- * Paginated to avoid returning thousands of docs in one shot.
+ * Supports status whitelist filtering, order ID / phone search, and bounded pagination.
  */
 export const getAllOrders = async (query = {}) => {
   const page  = Math.max(1, parseInt(query.page, 10) || 1);
   const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
   const skip  = (page - 1) * limit;
 
+  const filter = {};
+
+  // 1. Status whitelist filter
+  if (query.status !== undefined && query.status !== null && query.status !== "") {
+    if (typeof query.status !== "string") {
+      throw ApiError.badRequest("Status filter must be a string");
+    }
+    const trimmedStatus = query.status.trim();
+    const validStatuses = Object.values(ORDER_STATUSES);
+    if (!validStatuses.includes(trimmedStatus)) {
+      throw ApiError.badRequest(
+        `Invalid order status filter. Allowed values: ${validStatuses.join(", ")}`
+      );
+    }
+    filter.orderStatus = trimmedStatus;
+  }
+
+  // 2. Safe search by exact Order ID or partial delivery phone
+  if (typeof query.search === "string" && query.search.trim()) {
+    const term = query.search.trim();
+    if (mongoose.isValidObjectId(term)) {
+      filter._id = term;
+    } else {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter["shippingAddress.phone"] = { $regex: escaped, $options: "i" };
+    }
+  }
+
   const [orders, total] = await Promise.all([
-    Order.find()
+    Order.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("user", "name email")
       .select("-__v")
       .lean(),
-    Order.countDocuments(),
+    Order.countDocuments(filter),
   ]);
 
   return {
