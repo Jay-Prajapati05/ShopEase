@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Users,
   ShieldCheck,
@@ -9,27 +9,44 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  Search,
+  X,
+  Calendar,
+  Sparkles,
 } from "lucide-react";
 import adminApi from "../../api/admin.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+
+const ROLE_TABS = [
+  { label: "All Users", value: "" },
+  { label: "Customers", value: "user" },
+  { label: "Admins", value: "admin" },
+];
 
 export default function AdminUsersPage() {
   const { user: currentAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [page, setPage] = useState(1);
+  const [roleFilter, setRoleFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Delete state
-  const [deleteId, setDeleteId] = useState(null);
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await adminApi.getAllUsers({ page, limit: 10 });
+      const params = { page, limit: 10 };
+      if (roleFilter) params.role = roleFilter;
+      if (search.trim()) params.search = search.trim();
+
+      const res = await adminApi.getAllUsers(params);
       setUsers(res.data?.users || []);
       if (res.data?.pagination) {
         setPagination(res.data.pagination);
@@ -39,202 +56,371 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, roleFilter, search]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page]);
+  }, [fetchUsers]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearch("");
+    setPage(1);
+  };
+
+  const handleRoleChange = (val) => {
+    setRoleFilter(val);
+    setPage(1);
+  };
 
   const confirmDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await adminApi.deleteUser(deleteId);
-      setDeleteId(null);
+      await adminApi.deleteUser(deleteTarget._id);
+      setDeleteTarget(null);
       fetchUsers();
     } catch (err) {
-      alert(err?.response?.data?.message || "Failed to delete user.");
+      alert(err?.response?.data?.message || "Failed to delete user account.");
     } finally {
       setDeleting(false);
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* 1. Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-          Users & Customers
+        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+          Users & Customer Accounts
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Review registered customer accounts and administrator privileges
+        <p className="text-xs sm:text-sm text-gray-500 mt-1">
+          Review registered customer accounts, view signup dates, and manage privileges
         </p>
+      </div>
+
+      {/* 2. Search & Role Filter Bar */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-4 shadow-2xs space-y-4">
+        {/* Role Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          {ROLE_TABS.map((tab) => {
+            const active = roleFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => handleRoleChange(tab.value)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap select-none shrink-0 cursor-pointer ${
+                  active
+                    ? "bg-brand-500 text-gray-950 shadow-xs"
+                    : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/60"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search Bar */}
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search customers by name or email..."
+              className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
+          >
+            Search
+          </button>
+        </form>
       </div>
 
       {/* Error alert */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2.5">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs sm:text-sm font-semibold flex items-center gap-2.5">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Users Table Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* 3. Main Content Container */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center">
             <Loader2 className="w-8 h-8 text-brand-600 animate-spin mb-2" />
-            <p className="text-xs text-gray-400">Loading accounts...</p>
+            <p className="text-xs text-gray-400 font-semibold">Loading accounts...</p>
           </div>
         ) : users.length === 0 ? (
-          <div className="py-16 text-center">
+          <div className="py-16 text-center px-4">
             <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-gray-700">No users found</p>
+            <p className="text-sm font-bold text-gray-800">No users found</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {search || roleFilter
+                ? "Try clearing your search terms or role filters."
+                : "No customer accounts registered in the database yet."}
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200">
-                <tr>
-                  <th className="py-3 px-6">User</th>
-                  <th className="py-3 px-6">Email Address</th>
-                  <th className="py-3 px-6">Role</th>
-                  <th className="py-3 px-6">Registered Date</th>
-                  <th className="py-3 px-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {users.map((u) => {
-                  const date = new Date(u.createdAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  });
+          <>
+            {/* DESKTOP TABLE VIEW (hidden on mobile < 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500 font-bold border-b border-gray-200/80">
+                  <tr>
+                    <th className="py-3.5 px-6">User</th>
+                    <th className="py-3.5 px-6">Email Address</th>
+                    <th className="py-3.5 px-6">Role</th>
+                    <th className="py-3.5 px-6">Joined Date</th>
+                    <th className="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {users.map((u) => {
+                    const isSelf = String(u._id) === String(currentAdmin?._id);
+                    const isAdmin = u.role === "admin";
+                    const joinDate = u.createdAt
+                      ? new Date(u.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "Recently";
 
-                  const isSelf = String(u._id) === String(currentAdmin?.id || currentAdmin?._id);
-                  const isAdmin = u.role === "admin";
-
-                  return (
-                    <tr key={u._id} className="hover:bg-gray-50/50 transition-colors">
-                      {/* Name */}
-                      <td className="py-3.5 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${
-                            isAdmin ? "bg-brand-50 text-brand-700" : "bg-gray-100 text-gray-600"
-                          }`}>
-                            {u.name?.slice(0, 2).toUpperCase() || "US"}
+                    return (
+                      <tr key={u._id} className="hover:bg-gray-50/50 transition-colors">
+                        {/* Avatar & Name */}
+                        <td className="py-3.5 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-gray-950 font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                              {getInitials(u.name)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-xs sm:text-sm text-gray-900">
+                                {u.name}
+                              </p>
+                              {isSelf && (
+                                <span className="inline-block text-[10px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.2 rounded">
+                                  You (Current)
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-xs sm:text-sm">
+                        </td>
+
+                        {/* Email */}
+                        <td className="py-3.5 px-6 text-xs text-gray-600 font-medium">
+                          {u.email}
+                        </td>
+
+                        {/* Role Badge */}
+                        <td className="py-3.5 px-6">
+                          {isAdmin ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
+                              <User className="w-3 h-3 text-gray-400" />
+                              Customer
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Joined Date */}
+                        <td className="py-3.5 px-6 text-xs text-gray-500 font-medium">
+                          {joinDate}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3.5 px-6 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(u)}
+                            disabled={isSelf}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                            title={isSelf ? "You cannot delete your own account" : "Delete Account"}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MOBILE TABLE-TO-CARD VIEW (shown on screens < 768px, zero horizontal scrolling!) */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {users.map((u) => {
+                const isSelf = String(u._id) === String(currentAdmin?._id);
+                const isAdmin = u.role === "admin";
+                const joinDate = u.createdAt
+                  ? new Date(u.createdAt).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "Recently";
+
+                return (
+                  <div key={u._id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-gray-950 font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                          {getInitials(u.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-gray-900 truncate">
                               {u.name}
-                            </p>
+                            </span>
                             {isSelf && (
-                              <span className="text-[10px] text-brand-600 font-bold">
+                              <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.2 rounded">
                                 (You)
                               </span>
                             )}
                           </div>
+                          <p className="text-[11px] text-gray-500 truncate">{u.email}</p>
                         </div>
-                      </td>
+                      </div>
 
-                      {/* Email */}
-                      <td className="py-3.5 px-6 text-xs text-gray-600 font-medium">
-                        {u.email}
-                      </td>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(u)}
+                        disabled={isSelf}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition disabled:opacity-20 shrink-0 cursor-pointer"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                      {/* Role Badge */}
-                      <td className="py-3.5 px-6">
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-50">
+                      <div>
                         {isAdmin ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                            <Shield className="w-3 h-3" />
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                            <ShieldCheck className="w-3 h-3 text-brand-600" />
                             Admin
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                            <User className="w-3 h-3" />
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
+                            <User className="w-3 h-3 text-gray-400" />
                             Customer
                           </span>
                         )}
-                      </td>
-
-                      {/* Date */}
-                      <td className="py-3.5 px-6 text-xs text-gray-500">{date}</td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-6 text-right">
-                        <button
-                          onClick={() => setDeleteId(u._id)}
-                          disabled={isSelf}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isSelf
-                              ? "text-gray-300 cursor-not-allowed"
-                              : "text-gray-400 hover:text-red-600 hover:bg-gray-100"
-                          }`}
-                          title={isSelf ? "Cannot delete your own account" : "Delete User"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {joinDate}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
-        {/* Pagination */}
+        {/* 4. Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-            <span>
-              Showing Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+          <div className="flex items-center justify-between p-4 border-t border-gray-100 bg-gray-50/50 select-none text-xs">
+            <span className="text-gray-500 font-medium hidden sm:inline">
+              Showing page <strong className="text-gray-900">{pagination.page}</strong> of{" "}
+              <strong className="text-gray-900">{pagination.totalPages}</strong> ({pagination.total} total)
             </span>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 mx-auto sm:mx-0">
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-40"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
               </button>
+              <span className="font-bold text-gray-900 px-2 sm:hidden">
+                {pagination.page} / {pagination.totalPages}
+              </span>
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
                 disabled={page >= pagination.totalPages}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-40"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
               >
-                <ChevronRight className="w-4 h-4" />
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-xl">
-            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3">
+      {/* 5. Safe Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-200">
               <Trash2 className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-gray-900 mb-1">Delete Account?</h3>
-            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-              Are you sure you want to delete this user? Their account and access will be permanently revoked.
-            </p>
 
-            <div className="flex gap-2.5">
+            <div className="text-center">
+              <h3 className="text-base font-black text-gray-900">Confirm Account Deletion</h3>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                Are you sure you want to permanently delete account for{" "}
+                <strong className="text-gray-900">{deleteTarget.name}</strong> ({deleteTarget.email})? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
               <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-50 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="flex-1 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60"
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black transition shadow-xs cursor-pointer disabled:opacity-50"
               >
-                {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {deleting ? "Deleting..." : "Delete User"}
+                {deleting ? "Deleting..." : "Delete Account"}
               </button>
             </div>
           </div>
