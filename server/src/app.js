@@ -36,19 +36,51 @@ app.use(
 );
 
 const clientUrl = process.env.CLIENT_URL?.replace(/\/$/, "");
-const allowedOrigins = [
+const adminClientUrl = process.env.ADMIN_CLIENT_URL?.replace(/\/$/, "");
+
+const staticAllowedOrigins = [
   clientUrl,
+  adminClientUrl,
   "https://shop-ease-orpin-alpha.vercel.app",
   "http://localhost:5173",
   "http://localhost:8000",
+  "http://admin.localhost:5173",
+  "http://admin.localhost:8000",
 ].filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (staticAllowedOrigins.includes(origin)) return true;
+
+  // Allow any *.localhost on local dev ports 5173 / 8000
+  if (/^http:\/\/[a-z0-9-]+\.localhost:(5173|8000)$/.test(origin)) {
+    return true;
+  }
+
+  // Allow subdomains of COOKIE_DOMAIN if set (e.g. '.shopease.com')
+  const cookieDomain = process.env.COOKIE_DOMAIN?.replace(/^\./, "");
+  if (cookieDomain) {
+    try {
+      const url = new URL(origin);
+      if (
+        url.hostname === cookieDomain ||
+        url.hostname.endsWith(`.${cookieDomain}`)
+      ) {
+        return true;
+      }
+    } catch {
+      // Ignore URL parsing errors and reject
+    }
+  }
+
+  return false;
+};
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, postman)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
       return callback(new Error(`CORS blocked for origin: ${origin}`));
