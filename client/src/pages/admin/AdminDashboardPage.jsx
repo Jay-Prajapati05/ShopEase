@@ -272,7 +272,8 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* DESKTOP TABLE VIEW */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200">
               <tr>
@@ -294,7 +295,7 @@ export default function AdminDashboardPage() {
                 return (
                   <tr key={order._id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-3.5 px-6 font-mono font-semibold text-xs text-gray-800">
-                      #{order._id.slice(-8)}
+                      #{order._id.slice(-8).toUpperCase()}
                     </td>
                     <td className="py-3.5 px-6">
                       <p className="font-medium text-gray-900 text-xs sm:text-sm">
@@ -314,6 +315,40 @@ export default function AdminDashboardPage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* MOBILE TABLE-TO-CARD VIEW */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {recentOrders?.map((order) => {
+            const date = new Date(order.createdAt).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+
+            return (
+              <div key={order._id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-black text-xs text-gray-900">
+                    #{order._id.slice(-8).toUpperCase()}
+                  </span>
+                  <div>{getStatusBadge(order.orderStatus)}</div>
+                </div>
+
+                <div className="text-xs">
+                  <p className="font-bold text-gray-900">{order.user?.name || "Customer"}</p>
+                  <p className="text-[11px] text-gray-400">{order.user?.email}</p>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-50">
+                  <span className="text-gray-400 text-[11px]">{date}</span>
+                  <span className="font-black text-gray-900 text-sm">
+                    ₹{order.totalPrice?.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
