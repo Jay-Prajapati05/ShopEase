@@ -116,6 +116,16 @@ export default function AIChatbot() {
     }
   }, [isOpen, messages, isLoading]);
 
+  // Close drawer on Escape key when open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isOpen]);
+
   // Handle clearing conversation
   const handleClearHistory = () => {
     setMessages([getInitialMessage()]);
