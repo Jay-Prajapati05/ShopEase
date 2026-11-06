@@ -8,12 +8,19 @@ const baseOptions = () => {
     process.env.NODE_ENV === "production" ||
     process.env.CLIENT_URL?.startsWith("https://");
 
-  return {
+  const options = {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
     path: "/",
   };
+
+  // When configured (e.g. '.shopease.com' or '.localhost'), scopes cookies to root and all subdomains
+  if (process.env.COOKIE_DOMAIN) {
+    options.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  return options;
 };
 
 export const setAuthCookies = (res, { accessToken, refreshToken }) => {
