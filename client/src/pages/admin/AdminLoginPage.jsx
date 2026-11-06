@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldAlert, Lock, Mail, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth.js";
-import { getStorefrontUrl } from "../../utils/subdomain.js";
+import { isAdminSubdomain, getStorefrontUrl } from "../../utils/subdomain.js";
 
 /**
  * AdminLoginPage.jsx
@@ -18,13 +18,15 @@ import { getStorefrontUrl } from "../../utils/subdomain.js";
 export default function AdminLoginPage() {
   const { user, isAuthenticated, isAdmin, login, logout } = useAuth();
   const navigate = useNavigate();
+  const isSubdomain = isAdminSubdomain();
+  const dashboardPath = isSubdomain ? "/" : "/admin";
 
   // If already authenticated as admin, jump straight to the dashboard
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
-      navigate("/", { replace: true });
+      navigate(dashboardPath, { replace: true });
     }
-  }, [isAuthenticated, isAdmin, navigate]);
+  }, [isAuthenticated, isAdmin, navigate, dashboardPath]);
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -59,8 +61,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Successful admin login -> navigate to root admin dashboard
-      navigate("/", { replace: true });
+      // Successful admin login -> navigate to admin dashboard
+      navigate(dashboardPath, { replace: true });
     } catch (err) {
       const message =
         err?.response?.data?.message || "Invalid administrator credentials.";

@@ -7,7 +7,6 @@ import {
   RotateCcw,
   CreditCard,
   Gift,
-  Briefcase,
   Headphones,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -22,7 +21,7 @@ import { useAuth } from "../../hooks/useAuth.js";
  * - Commercial sub-footer with seller/admin links, payment partner icons & copyright
  */
 export default function Footer() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated } = useAuth();
   const year = new Date().getFullYear();
 
   return (
@@ -204,21 +203,6 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
           {/* Quick Links */}
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-400">
-            {isAdmin ? (
-              <Link
-                to="/admin"
-                className="flex items-center gap-1.5 text-brand-400 hover:text-brand-300 font-bold"
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>Admin Workspace</span>
-              </Link>
-            ) : (
-              <span className="flex items-center gap-1.5 text-gray-400">
-                <Briefcase className="w-3.5 h-3.5 text-brand-400" />
-                <span>Become an Admin / Seller</span>
-              </span>
-            )}
-
             <span className="flex items-center gap-1.5 text-gray-400">
               <Gift className="w-3.5 h-3.5 text-amber-400" />
               <span>Gift Cards</span>

@@ -216,6 +216,16 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
+      {/* Dedicated Admin Login on single domain / fallback */}
+      <Route
+        path="/admin/login"
+        element={
+          <Suspense fallback={<AdminLoadingFallback />}>
+            <AdminLoginPage />
+          </Suspense>
+        }
+      />
+
       {/* Customer storefront routes — wrapped in Navbar + Footer layout */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />

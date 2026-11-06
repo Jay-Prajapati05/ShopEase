@@ -3,6 +3,8 @@ import { authApi } from "../api/auth.api.js";
 
 export const AuthContext = createContext(null);
 
+export const GUEST_PREVIEW_KEY = "shopease_guest_preview";
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   // loading: true while app checks for an existing session on mount
@@ -14,6 +16,28 @@ export function AuthProvider({ children }) {
   // handle that case manually here.
   useEffect(() => {
     let cancelled = false;
+
+    // Guest preview isolation: when storefront is opened from Admin "Visit Storefront",
+    // do not restore admin cookie session so the storefront behaves as a fresh guest visitor.
+    const searchParams =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : null;
+    const isGuestPreview =
+      searchParams?.get("preview") === "guest" ||
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem(GUEST_PREVIEW_KEY) === "true");
+
+    if (isGuestPreview) {
+      try {
+        sessionStorage.setItem(GUEST_PREVIEW_KEY, "true");
+      } catch {
+        // ignore
+      }
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
     const restoreSession = async () => {
       try {
@@ -44,12 +68,22 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (credentials) => {
+    try {
+      sessionStorage.removeItem(GUEST_PREVIEW_KEY);
+    } catch {
+      // ignore
+    }
     const data = await authApi.login(credentials);
     setUser(data.data.user);
     return data;
   }, []);
 
   const register = useCallback(async (userData) => {
+    try {
+      sessionStorage.removeItem(GUEST_PREVIEW_KEY);
+    } catch {
+      // ignore
+    }
     const data = await authApi.register(userData);
     setUser(data.data.user);
     return data;
@@ -57,6 +91,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
+      sessionStorage.removeItem(GUEST_PREVIEW_KEY);
       await authApi.logout();
     } finally {
       // Always clear local user state, even if the server call fails,
