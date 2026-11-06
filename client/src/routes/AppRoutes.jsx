@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout.jsx";
 import PrivateRoute from "./PrivateRoute.jsx";
 import AdminRoute from "./AdminRoute.jsx";
+import { isAdminSubdomain } from "../utils/subdomain.js";
 import HomePage from "../pages/HomePage.jsx";
 import LoginPage from "../pages/LoginPage.jsx";
 import RegisterPage from "../pages/RegisterPage.jsx";
@@ -36,6 +37,9 @@ const AdminOrdersPage = lazy(() =>
 const AdminUsersPage = lazy(() =>
   import("../pages/admin/AdminUsersPage.jsx")
 );
+const AdminLoginPage = lazy(() =>
+  import("../pages/admin/AdminLoginPage.jsx")
+);
 
 /** Minimal loading fallback shown while an admin chunk is being fetched. */
 function AdminLoadingFallback() {
@@ -50,10 +54,125 @@ function AdminLoadingFallback() {
 }
 
 export default function AppRoutes() {
+  const isSubdomain = isAdminSubdomain();
+
+  // ---------------------------------------------------------------------------
+  // Dedicated Admin Subdomain (e.g. admin.localhost:8000 or admin.shopease.com)
+  // Root URL '/' maps directly to the Admin Dashboard!
+  // ---------------------------------------------------------------------------
+  if (isSubdomain) {
+    return (
+      <Routes>
+        <Route element={<AdminRoute />}>
+          <Route
+            element={
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <AdminLayout />
+              </Suspense>
+            }
+          >
+            {/* Both root '/' and '/admin' render the Admin Dashboard */}
+            <Route
+              index
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminDashboardPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminDashboardPage />
+                </Suspense>
+              }
+            />
+
+            {/* Products management */}
+            <Route
+              path="/products"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminProductsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/products"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminProductsPage />
+                </Suspense>
+              }
+            />
+
+            {/* Orders management */}
+            <Route
+              path="/orders"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminOrdersPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminOrdersPage />
+                </Suspense>
+              }
+            />
+
+            {/* Users management */}
+            <Route
+              path="/users"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminUsersPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <Suspense fallback={<AdminLoadingFallback />}>
+                  <AdminUsersPage />
+                </Suspense>
+              }
+            />
+          </Route>
+        </Route>
+
+        {/* Dedicated Admin Portal Login on admin subdomain */}
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={<AdminLoadingFallback />}>
+              <AdminLoginPage />
+            </Suspense>
+          }
+        />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route element={<PrivateRoute />}>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* 404 on admin subdomain */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Customer Storefront (e.g. localhost:8000 or shopease.com)
+  // Standard consumer shopping layout with fallback admin route support
+  // ---------------------------------------------------------------------------
   return (
     <Routes>
-      {/* Admin routes — lazy-loaded, wrapped in Suspense so the spinner
-          shows while the admin JS chunk downloads. */}
+      {/* Fallback admin routes on main domain (lazy-loaded) */}
       <Route element={<AdminRoute />}>
         <Route
           element={

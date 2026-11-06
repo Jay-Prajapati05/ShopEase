@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ShoppingBag,
   LogOut,
-  LayoutDashboard,
   Menu,
   X,
   ShoppingCart,
@@ -154,17 +153,6 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Admin shortcut for admins */}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-800 bg-brand-50 border border-brand-200/80 py-1.5 px-3 rounded-xl hover:bg-brand-100 transition-all shadow-2xs"
-              >
-                <LayoutDashboard className="w-4 h-4 text-brand-700" />
-                <span>Admin</span>
-              </Link>
-            )}
-
             {/* Account / Auth */}
             {isAuthenticated ? (
               <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
@@ -298,11 +286,6 @@ export default function Navbar() {
                     </p>
                   </div>
                 </div>
-                {isAdmin && (
-                  <span className="px-2.5 py-1 bg-brand-100 text-brand-800 font-bold text-[11px] rounded-full uppercase tracking-wider">
-                    Admin
-                  </span>
-                )}
               </div>
             ) : (
               <div className="bg-brand-50/60 border border-brand-200/60 rounded-2xl p-4 text-center">
@@ -380,20 +363,6 @@ export default function Navbar() {
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </Link>
                 </>
-              )}
-
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold text-brand-800 bg-brand-50/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <LayoutDashboard className="w-4 h-4 text-brand-700" />
-                    <span>Admin Panel</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-brand-500" />
-                </Link>
               )}
             </div>
 
