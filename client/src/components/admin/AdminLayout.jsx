@@ -35,7 +35,8 @@ export default function AdminLayout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    const loginPath = isSubdomain ? "/login" : "/admin/login";
+    navigate(loginPath);
   };
 
   return (

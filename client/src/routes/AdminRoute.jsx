@@ -11,7 +11,9 @@ export default function AdminRoute() {
 
   if (loading) return null;
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  const loginPath = isAdminSubdomain() ? "/login" : "/admin/login";
+
+  if (!isAuthenticated) return <Navigate to={loginPath} replace />;
 
   if (!isAdmin) {
     if (isAdminSubdomain()) {
